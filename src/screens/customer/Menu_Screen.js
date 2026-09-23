@@ -61,7 +61,7 @@ export default function MenuScreen({ route, navigation }) {
       
       
       <View style={styles.leftPanel}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() =>  navigation.navigate('SelectTable')}>
           <Text style={styles.backButtonText}>← กลับไปหน้าเลือกโต๊ะ</Text>
         </TouchableOpacity>
         <Text style={styles.restaurantName}> ครัว 4 สหาย </Text>
