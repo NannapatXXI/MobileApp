@@ -53,8 +53,23 @@ export default function HomeScreen({ navigation }) {
     }
     load();
   }, [db]);
+
+  // TODO: ยังไม่ทำระบบ PIN ตอนนี้ — แค่ทำให้กดได้ก่อน
+  function handleStaffPress() {
+    console.log('กดปุ่มพนักงานแล้ว');
+  }
+
   return (
     <View style={styles.content}> 
+
+      {/* ---- ปุ่มสำหรับพนักงาน มุมขวาบน (ยังไม่มี PIN / ยังไม่ navigate ไปไหน) ---- */}
+      <Pressable
+        style={({ pressed }) => [styles.staffBadge, pressed && styles.staffBadgePressed]}
+        onPress={handleStaffPress}
+      >
+        <Text style={styles.staffBadgeText}>สำหรับพนักงาน</Text>
+      </Pressable>
+
       <View >
         <View style={styles.Toplayer}>
             <View  style={{flexDirection: 'row'}} >
@@ -267,9 +282,25 @@ TopLayerHeader: {
   minHeight: 70,
  
   margin:10
-}
+},
 
-
+  // ---- ปุ่มสำหรับพนักงาน (มุมขวาบน) — แค่กดได้ ยังไม่มี PIN / ยัง navigate ไปไหน ----
+  staffBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: '#E4F0E7',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  staffBadgePressed: {
+    opacity: 0.7,
+  },
+  staffBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#42544A',
+  },
 });
-
-
