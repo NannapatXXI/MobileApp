@@ -1,10 +1,10 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SQLiteProvider } from 'expo-sqlite';
-import HomeScreen from './src/screens/order/HomeScreen';
+import PreSendToKitchen from './src/screens/order/PreSendToKitchen';
 import DetailScreen from './src/screens/order/DetailScreen';
 import ExportBillScreen from './src/screens/order/ExportBillScreen';
-import { DATABASE_NAME, initDb, seedDb ,logAllData,seedMockBill} from './src/db/db';
+import { DATABASE_NAME, initDb, seedDb, seedMockBill } from './src/db/db';
 import { CartProvider } from './src/context/CartContext';
 import SelectTable from './src/screens/customer/Select_Table';
 import MenuScreen from './src/screens/customer/Menu_Screen';
@@ -20,8 +20,8 @@ export default function App() {
       onInit={async (db) => {
         await initDb(db);
         await seedDb(db);
-        await seedMockBill(db); 
-        await logAllData(db); //logTable
+        await seedMockBill(db);
+        // await logAllData(db); // เปิดเมื่ออยากดูข้อมูลใน DB ตอน debug (ต้อง import logAllData ด้วย)
       }}
     >
       <CartProvider>
@@ -35,7 +35,7 @@ export default function App() {
               component={ItemDetailScreen}
               options={{ presentation: 'transparentModal', animation: 'fade' }}
             />
-              <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="SendToKitchen" component={PreSendToKitchen} options={{ headerShown: false }} />
               <Stack.Screen name="Detail" component={DetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Bill" component={ExportBillScreen} options={{ headerShown: false }} />
           </Stack.Navigator>

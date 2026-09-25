@@ -6,6 +6,7 @@ import colors, { alpha } from './style/colors';
 import { getTablesWithStatus, openNewBill } from '../../db/queries_customer/tables';
 import { getKitchenQueueCount } from '../../db/queries_customer/orders';
 import { resetSalesData } from '../../db/db';
+import { toThaiTime } from '../../utils/bill';
 
 //ใช้การ render ตารางผ่าน scrollviwe ไม่ใช่การใช้ FlatList
 // 133 คือ การดึงมาจาก db
@@ -34,16 +35,6 @@ function formatThaiDate(bangkokDate) {
   return `${day} ${bangkokDate.getUTCDate()} ${month} ${buddhistYear} · รอบ${period}`;
 }
 
-
-// เติม T + ' ให้ parser รู้ว่า string นี้คือ UTC ไม่ใช่ local time จะได้เวลาไทยตลอด
-function formatBangkokHM(sqliteUtcString) {
-  if (!sqliteUtcString) return '';
-  const utcMs = Date.parse(sqliteUtcString.replace(' ', 'T') + 'Z');
-  const bangkokDate = new Date(utcMs + BANGKOK_OFFSET_MS);
-  const hh = String(bangkokDate.getUTCHours()).padStart(2, '0');
-  const mm = String(bangkokDate.getUTCMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
 
 
 // เปิดบิลแต่ไม่ได้สั่ง จะถือว่าไม่มีบิลค้างเด้ออ
@@ -76,10 +67,16 @@ export default function SelectTable({ navigation }) {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [kitchenQueueCount, setKitchenQueueCount] = useState(0);
 
+  // โหลดสถานะโต๊ะ + คิวครัว (ใช้ตอนเปิดหน้า และหลังกดล้างข้อมูล)
+  function loadData() {
+    getTablesWithStatus(db).then(setTables);
+    getKitchenQueueCount(db).then(setKitchenQueueCount);
+  }
+
+  // โหลดใหม่ทุกครั้งที่กลับมาหน้านี้
   useFocusEffect(
     useCallback(() => {
-      getTablesWithStatus(db).then(setTables);
-      getKitchenQueueCount(db).then(setKitchenQueueCount);
+      loadData();
     }, [db])
   );
 
@@ -120,8 +117,7 @@ export default function SelectTable({ navigation }) {
           onPress: async () => {
             await resetSalesData(db);
             setSelectedTableId(null);
-            getTablesWithStatus(db).then(setTables);
-            getKitchenQueueCount(db).then(setKitchenQueueCount);
+            loadData();
           },
         },
       ]
@@ -211,7 +207,7 @@ export default function SelectTable({ navigation }) {
                       </Text>
                       <Text style={styles.tableBusyRounds}>{t.round_count} รอบ</Text>
                       <Text style={styles.tableOpenedTime}>
-                        เปิด {formatBangkokHM(t.opened_at)}
+                        เปิด {toThaiTime(t.opened_at)}
                       </Text>
                     </>
                   ) : (

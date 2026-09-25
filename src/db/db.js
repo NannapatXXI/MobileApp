@@ -1,20 +1,6 @@
-// db/schema.js
+// src/db/db.js
 // สร้างตารางทั้งหมด + ใส่ข้อมูลตั้งต้น สำหรับแอปสั่งอาหารในร้าน (expo-sqlite)
-//
-// วิธีใช้ใน App.tsx:
-//
-//   import { SQLiteProvider } from 'expo-sqlite';
-//   import { DATABASE_NAME, initDb, seedDb } from './db/schema';
-//
-//   <SQLiteProvider
-//     databaseName={DATABASE_NAME}
-//     onInit={async (db) => {
-//       await initDb(db);
-//       await seedDb(db);
-//     }}
-//   >
-//     <App />
-//   </SQLiteProvider>
+// ถูกเรียกใน App.js ผ่าน <SQLiteProvider onInit={...}>
 //
 // ข้อควรรู้:
 // - ห้ามเรียก openDatabaseAsync เองในหน้าจอ ให้ SQLiteProvider จัดการที่เดียว (ตามข้อกำหนด §4)
@@ -311,6 +297,26 @@ export async function seedMockBill(db) {
   const existing = await db.getFirstAsync('SELECT COUNT(*) AS count FROM bills');
   if (existing?.count > 0) return;
 
+  // unit_price คือราคาต่อจานที่ "รวม option แล้ว" (เหมือนตอนลูกค้ากดเพิ่มลงตะกร้าจริง)
+  // option = ตัวเลือกที่แนบไปกับจานนั้น (ถ้ามี)
+  const MOCK_ROUNDS = [
+    [ // รอบที่ 1
+      { itemId: 1, unitPrice: 7000, qty: 2, note: 'ธรรมดา', status: 'served',
+        option: { optionId: 3, name: 'ไข่ดาว', price: 1000 } }, // กะเพราหมูสับ 60 + ไข่ดาว 10
+      { itemId: 3, unitPrice: 6500, qty: 1, note: '', status: 'served' },
+      { itemId: 4, unitPrice: 8000, qty: 1, note: '', status: 'served' },
+      { itemId: 7, unitPrice: 5500, qty: 2, note: '', status: 'served' },
+      { itemId: 17, unitPrice: 3500, qty: 2, note: '', status: 'served' },
+    ],
+    [ // รอบที่ 2
+      { itemId: 10, unitPrice: 5500, qty: 3, note: 'หวานน้อย', status: 'cooking' },
+      { itemId: 23, unitPrice: 3000, qty: 2, note: '', status: 'pending' },
+      { itemId: 6, unitPrice: 9000, qty: 1, note: 'เผ็ดน้อย', status: 'cooking' },
+      { itemId: 11, unitPrice: 5500, qty: 2, note: '', status: 'pending' },
+      { itemId: 25, unitPrice: 2000, qty: 4, note: '', status: 'pending' },
+    ],
+  ];
+
   await db.withTransactionAsync(async () => {
     const bill = await db.runAsync(
       `INSERT INTO bills (table_id, opened_at, status) VALUES (?, datetime('now'), 'open')`,
@@ -318,38 +324,27 @@ export async function seedMockBill(db) {
     );
     const billId = bill.lastInsertRowId;
 
-    // รอบที่ 1
-    const round1 = await db.runAsync(
-      `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, 1, datetime('now'))`,
-      [billId]
-    );
-    const round1Id = round1.lastInsertRowId;
+    for (let i = 0; i < MOCK_ROUNDS.length; i++) {
+      const round = await db.runAsync(
+        `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, ?, datetime('now'))`,
+        [billId, i + 1]
+      );
+      const roundId = round.lastInsertRowId;
 
-    const item1 = await db.runAsync(
-      `INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`,
-      [round1Id, 1, 6000, 2, 'ธรรมดา', 'served']
-    );
-    await db.runAsync(
-      `INSERT INTO order_item_options (order_item_id, option_id, option_name_snapshot, price_delta_satang_snapshot) VALUES (?, ?, ?, ?)`,
-      [item1.lastInsertRowId, 1, 'ไข่ดาว', 1000]
-    );
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round1Id, 3, 6500, 1, '', 'served']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round1Id, 4, 8000, 1, '', 'served']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round1Id, 7, 5500, 2, '', 'served']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round1Id, 17, 3500, 2, '', 'served']);
+      for (const item of MOCK_ROUNDS[i]) {
+        const orderItem = await db.runAsync(
+          `INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`,
+          [roundId, item.itemId, item.unitPrice, item.qty, item.note, item.status]
+        );
 
-    // รอบที่ 2
-    const round2 = await db.runAsync(
-      `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, 2, datetime('now'))`,
-      [billId]
-    );
-    const round2Id = round2.lastInsertRowId;
-
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round2Id, 10, 5500, 3, 'หวานน้อย', 'cooking']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round2Id, 23, 3000, 2, '', 'pending']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round2Id, 6, 9000, 1, 'เผ็ดน้อย', 'cooking']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round2Id, 11, 5500, 2, '', 'pending']);
-    await db.runAsync(`INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`, [round2Id, 25, 2000, 4, '', 'pending']);
+        if (item.option) {
+          await db.runAsync(
+            `INSERT INTO order_item_options (order_item_id, option_id, option_name_snapshot, price_delta_satang_snapshot) VALUES (?, ?, ?, ?)`,
+            [orderItem.lastInsertRowId, item.option.optionId, item.option.name, item.option.price]
+          );
+        }
+      }
+    }
   });
 }
 export async function getBillWithRounds(db, billId) {
