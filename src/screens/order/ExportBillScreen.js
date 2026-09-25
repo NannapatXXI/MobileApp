@@ -1,47 +1,13 @@
-import { View, Text, StyleSheet, TextInput, Switch, Pressable, ScrollView } from 'react-native';
-import { useState } from 'react';
-
-const orders = [
-  {
-    round: 1, sentTime: '18:12', status: 'เสิร์ฟครบ',
-    items: [
-      { id: '1', name: 'ข้าวผัดกุ้ง', note: 'ธรรมดา', price: 120, qty: 2 },
-      { id: '2', name: 'คะน้าน้ำมันหอย', note: 'ใส่หมูกรอบ', price: 105, qty: 1 },
-    ]
-  },
-  {
-    round: 2, sentTime: '18:52', status: 'กำลังทำ',
-    items: [
-      { id: '3', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-      { id: '4', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-    ]
-  },
-  {
-    round: 3, sentTime: '18:52', status: 'กำลังทำ',
-    items: [
-      { id: '5', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-      { id: '6', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-    ]
-  },{
-    round: 4, sentTime: '18:52', status: 'กำลังทำ',
-    items: [
-      { id: '5', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-      { id: '6', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-    ]
-  },{
-    round: 5, sentTime: '18:52', status: 'กำลังทำ',
-    items: [
-      { id: '5', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-      { id: '6', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-    ]
-  },{
-    round: 6, sentTime: '18:52', status: 'กำลังทำ',
-    items: [
-      { id: '5', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-      { id: '6', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-    ]
-  },
-];
+import { View, Text, StyleSheet, TextInput, Switch, Pressable, ScrollView, Alert } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { useSQLiteContext } from 'expo-sqlite';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as MailComposer from 'expo-mail-composer';
+import { captureRef } from 'react-native-view-shot';
+import { File, Paths } from 'expo-file-system';
+import { getBillWithRounds } from '../../db/db';
+import { billToOrders, calcBillTotals, toThaiTime } from '../../utils/bill';
 
 const FORMAT_OPTIONS = [
   { id: 'pdf_a5', label: 'PDF A5 (ใบเสร็จเต็ม)', size: '~120 KB' },
@@ -58,34 +24,149 @@ function Row({ label, value, bold, labelStyle }) {
   );
 }
 
-export default function ExportBillScreen({navigation}) {
+// สร้างหน้าใบเสร็จเป็น HTML เพื่อให้ expo-print แปลงเป็น PDF
+function buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax }) {
+  const title = fullTax ? 'ใบกำกับภาษีเต็มรูป' : 'ใบเสร็จรับเงิน';
+
+  let rows = '';
+  for (const round of orders) {
+    rows += `<tr><td colspan="2" class="round">ROUND ${round.round} · ${round.sentTime}</td></tr>`;
+    for (const item of round.items) {
+      rows += `<tr><td>${item.name} ×${item.qty}</td><td class="right">${item.price * item.qty}</td></tr>`;
+    }
+  }
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: sans-serif; padding: 16px; font-size: 12px; }
+          h1 { text-align: center; font-size: 18px; margin: 0; }
+          .center { text-align: center; color: #666; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 3px 0; }
+          .right { text-align: right; }
+          .round { color: #888; padding-top: 8px; }
+          .total td { font-weight: bold; font-size: 15px; border-top: 1px solid #333; padding-top: 8px; }
+          hr { border: none; border-top: 1px dashed #ccc; }
+        </style>
+      </head>
+      <body>
+        <h1>ครัวป้าน้อย</h1>
+        <p class="center">${title}<br/>123 ถ.นิมมานเหมินท์ เชียงใหม่<br/>TAX ID 0505561000000</p>
+        <hr/>
+        <table>
+          <tr><td>BILL</td><td class="right">#${bill.bill_id}</td></tr>
+          <tr><td>TABLE</td><td class="right">T${bill.table_number}</td></tr>
+        </table>
+        <hr/>
+        <table>${rows}</table>
+        <hr/>
+        <table>
+          <tr><td>SUBTOTAL</td><td class="right">${subtotal.toLocaleString()}</td></tr>
+          <tr><td>SERVICE 10%</td><td class="right">${service.toLocaleString()}</td></tr>
+          <tr><td>VAT 7%</td><td class="right">${vat.toLocaleString()}</td></tr>
+          <tr class="total"><td>TOTAL</td><td class="right">฿${total.toLocaleString()}</td></tr>
+        </table>
+        <p class="center">ขอบคุณที่มาทานค่ะ</p>
+      </body>
+    </html>
+  `;
+}
+
+export default function ExportBillScreen({ route, navigation }) {
+  const { billId } = route.params ?? {};
+  const db = useSQLiteContext();
+  const [bill, setBill] = useState(null);
   const [selectedFormat, setSelectedFormat] = useState('pdf_a5');
   const [email, setEmail] = useState('');
   const [fullTax, setFullTax] = useState(false);
+  const receiptRef = useRef(null); // ใช้ถ่ายภาพใบเสร็จตอนเลือก PNG
 
-  const subtotal = orders.reduce((sum, round) =>
-    sum + round.items.reduce((s, item) => s + item.price * item.qty, 0), 0
-  );
-  const discount = Math.round(subtotal * 0.05);
-  const service = Math.round(subtotal * 0.10);
-  const vat = Math.round(subtotal * 0.07);
-  const total = subtotal - discount + service + vat;
+  useEffect(() => {
+    if (!billId) return;
+    getBillWithRounds(db, billId).then(setBill);
+  }, [db, billId]);
+
+  const orders = billToOrders(bill);
+  const { subtotal, service, vat, total } = calcBillTotals(orders);
+  const billDate = bill?.opened_at?.slice(0, 10) ?? '-';
+
+  // 1) สร้างไฟล์ PDF -> คืนค่า uri ของไฟล์ชั่วคราว
+  async function makePdf() {
+    // ขนาดกระดาษเป็นหน่วย point (1 นิ้ว = 72 point)
+    // A5 = 420 x 595, สลิป 80 มม. กว้าง 227
+    const size = selectedFormat === 'pdf_slip'
+      ? { width: 227, height: 800 }
+      : { width: 420, height: 595 };
+
+    const html = buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax });
+    const { uri } = await Print.printToFileAsync({ html, ...size });
+    return uri;
+  }
+
+  // 2) ถ่ายภาพใบเสร็จบนจอเป็น PNG -> คืนค่า uri ของไฟล์ชั่วคราว
+  async function makePng() {
+    return captureRef(receiptRef, { format: 'png', quality: 1 });
+  }
+
+  // 3) ย้ายไฟล์ชั่วคราวมาไว้ในโฟลเดอร์ของแอป แล้วตั้งชื่อใหม่
+  //    (ถ้าแชร์ไฟล์ชั่วคราวตรงๆ Android ไม่ยอมให้อ่าน)
+  function saveToAppFolder(tempUri, fileName) {
+    const file = new File(Paths.document, fileName);
+    if (file.exists) file.delete();
+    new File(tempUri).copy(file);
+    return file.uri;
+  }
+
+  async function handleExport() {
+    if (!bill) return;
+
+    const isPng = selectedFormat === 'png';
+    const fileName = `bill-${bill.bill_id}.${isPng ? 'png' : 'pdf'}`;
+    const mimeType = isPng ? 'image/png' : 'application/pdf';
+
+    try {
+      const tempUri = isPng ? await makePng() : await makePdf();
+      const fileUri = saveToAppFolder(tempUri, fileName);
+
+      // มีอีเมล -> เปิดหน้าส่งเมลพร้อมแนบไฟล์, ไม่มีอีเมล -> เปิดเมนูแชร์
+      if (email.trim() !== '') {
+        const canSendMail = await MailComposer.isAvailableAsync();
+        if (!canSendMail) {
+          Alert.alert('ส่งอีเมลไม่ได้', 'เครื่องนี้ยังไม่ได้ตั้งค่าแอปอีเมล');
+          return;
+        }
+        await MailComposer.composeAsync({
+          recipients: [email.trim()],
+          subject: `ใบเสร็จ ครัว 4 สหาย บิล #${bill.bill_id}`,
+          body: 'ขอบคุณที่มาทานครับ ใบเสร็จแนบมากับอีเมลนี้',
+          attachments: [fileUri],
+        });
+      } else {
+        await Sharing.shareAsync(fileUri, { mimeType });
+      }
+    } catch (e) {
+      Alert.alert('สร้างไฟล์ไม่สำเร็จ', e.message);
+    }
+  }
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.row}>
 
         {/* ใบเสร็จ */}
-        <View style={styles.receipt}>
+        <View style={styles.receipt} ref={receiptRef} collapsable={false}>
           <Text style={styles.shopName}>ครัวป้าน้อย</Text>
           <Text style={styles.shopSub}>123 ถ.นิมมานเหมินท์ เชียงใหม่</Text>
           <Text style={styles.shopSub}>TAX ID 0505561000000</Text>
 
           <View style={styles.dividerDash} />
 
-          <Row label="BILL" value="#A-1042" />
-          <Row label="TABLE" value="T5" />
-          <Row label="16/09/2026" value="18:12 – 20:04" />
+          <Row label="BILL" value={`#${billId}`} />
+          <Row label="TABLE" value={`T${bill?.table_number ?? '-'}`} />
+          <Row label={billDate} value={`เปิด ${toThaiTime(bill?.opened_at)}`} />
 
           <View style={styles.dividerDash} />
 
@@ -110,7 +191,6 @@ export default function ExportBillScreen({navigation}) {
           <View style={styles.dividerDash} />
 
           <Row label="SUBTOTAL" value={subtotal.toLocaleString()} />
-          <Row label="DISCOUNT 5%" value={`-${discount}`} />
           <Row label="SERVICE 10%" value={service.toString()} />
           <Row label="VAT 7%" value={vat.toString()} />
 
@@ -164,11 +244,11 @@ export default function ExportBillScreen({navigation}) {
             />
           </View>
 
-          <Pressable style={styles.btnExport}>
+          <Pressable style={styles.btnExport} onPress={handleExport}>
             <Text style={styles.btnText}>สร้างไฟล์ใบเสร็จ</Text>
           </Pressable>
 
-          <Pressable onPress={() => navigation.navigate('Detail' )}>
+          <Pressable onPress={() => navigation.goBack()}>
                      <Text style={styles.backLink}>กลับไปหน้าสรุปบิล</Text>
           </Pressable>
 

@@ -10,44 +10,35 @@ const STATUS_STYLE = {
 const BillOrderStatus = ({ bill }) => {
   if (!bill || !bill.rounds) return <Text>กำลังโหลด...</Text>;
 
+  // รวมรายการของทุกรอบเป็น list เดียว แล้วใช้ FlatList ตัวเดียว
+  const items = bill.rounds.flatMap((round) => round.items);
+
   return (
     <FlatList
-      data={bill.rounds}
-      keyExtractor={(item) => item.round_id.toString()}
-      style={{ flex: 1 }}  
-     // scrollEnabled={false}
-      renderItem={({ item: round }) => (
-        <View>
-          <FlatList
-            data={round.items}
-            keyExtractor={(item) => item.order_item_id.toString()}
-            scrollEnabled={false}
-            renderItem={({ item }) => {
-              const s = STATUS_STYLE[item.status] ?? STATUS_STYLE['pending'];
-              return (
-                <View style={styles.card}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <Text style={styles.qty}>{item.quantity}×</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.name}>
-                        {item.name}
-                        {item.options?.length > 0 &&
-                          ` (${item.options.map(o => o.option_name_snapshot).join(', ')})`}
-                      </Text>
-                      {item.note ? (
-                        <Text style={styles.note}>{item.note}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <View style={[styles.badge, { backgroundColor: s.bg }]}>
-                    <Text style={[styles.badgeText, { color: s.text }]}>{s.label}</Text>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        </View>
-      )}
+      data={items}
+      keyExtractor={(item) => item.order_item_id.toString()}
+      style={{ flex: 1 }}
+      renderItem={({ item }) => {
+        const s = STATUS_STYLE[item.status] ?? STATUS_STYLE['pending'];
+        const optionNames = item.options.map((o) => o.option_name_snapshot).join(', ');
+        return (
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Text style={styles.qty}>{item.quantity}×</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>
+                  {item.name}
+                  {optionNames ? ` (${optionNames})` : ''}
+                </Text>
+                {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
+              </View>
+            </View>
+            <View style={[styles.badge, { backgroundColor: s.bg }]}>
+              <Text style={[styles.badgeText, { color: s.text }]}>{s.label}</Text>
+            </View>
+          </View>
+        );
+      }}
     />
   );
 };
