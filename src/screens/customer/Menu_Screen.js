@@ -25,10 +25,11 @@ export default function MenuScreen({ route, navigation }) {
 
   const roundTotal = cart.reduce((sum, c) => sum + c.unit_price_satang * c.quantity, 0);
 
-  useEffect(() => {
-    getCategoriesWithCounts(db).then(setCategories)
-
-  }, [db])
+  useFocusEffect(
+    useCallback(() => {
+      getCategoriesWithCounts(db).then(setCategories);
+    }, [db])
+  );
 
   // พอ categories โหลดมาครั้งแรก ให้เลือกหมวดแรกอัตโนมัติ (ยังไม่เคยเลือกอะไรเลย)
   useEffect(() => {
@@ -37,10 +38,14 @@ export default function MenuScreen({ route, navigation }) {
     }
   }, [categories, selectedCategoryId]);
 
-  useEffect(() => {
-    if (!selectedCategoryId) return;
-    getMenuItems(db, { categoryId: selectedCategoryId, search: searchText, onlyAvailable }).then(setMenuItems)
-  }, [db, selectedCategoryId, searchText, onlyAvailable]);
+  // ใช้ useFocusEffect แทน useEffect เฉย ๆ เพื่อ query เมนูใหม่ทุกครั้งที่กลับมาโฟกัสหน้านี้
+  // (เช่น พนักงานเพิ่งแก้ราคา/ปิดขายที่ MenuSettingsScreen แล้วลูกค้ากลับมาหน้านี้ ต้องเห็นราคา/สถานะล่าสุด)
+  useFocusEffect(
+    useCallback(() => {
+      if (!selectedCategoryId) return;
+      getMenuItems(db, { categoryId: selectedCategoryId, search: searchText, onlyAvailable }).then(setMenuItems);
+    }, [db, selectedCategoryId, searchText, onlyAvailable])
+  );
 
 
 
@@ -61,7 +66,7 @@ export default function MenuScreen({ route, navigation }) {
       
       
       <View style={styles.leftPanel}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('SelectTable')}>
           <Text style={styles.backButtonText}>← กลับไปหน้าเลือกโต๊ะ</Text>
         </TouchableOpacity>
         <Text style={styles.restaurantName}> ครัว 4 สหาย </Text>

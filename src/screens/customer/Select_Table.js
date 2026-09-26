@@ -160,9 +160,16 @@ export default function SelectTable({ navigation }) {
           </View>
         </View>
 
-        <Pressable style={styles.resetButton} onPress={handleResetData}>
-          <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
-        </Pressable>
+        <View style={styles.leftFooterRow}>
+          <Pressable style={styles.resetButton} onPress={handleResetData}>
+            <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
+          </Pressable>
+
+          <Pressable style={styles.staffButton} onPress={() => navigation.navigate('StaffScreen')}>
+            <Text style={styles.staffButtonText}>สำหรับพนักงาน</Text>
+          </Pressable>
+        </View>
+
       </View>
 
       <View style={styles.rightPanel}>
@@ -347,7 +354,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ฝั่งซ้าย — ปุ่มล้างข้อมูล (ชิดล่างสุดของแผง)
+  // ฝั่งซ้าย — แถวปุ่มล่างสุดของแผง (ล้างข้อมูล + สำหรับพนักงาน)
+  leftFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   resetButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -360,6 +372,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: alpha.onDarkMax,
+  },
+  staffButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface.sidebarCard,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  staffButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.core.darkGreen,
   },
 
   // ฝั่งขวา — หัวข้อ + legend
