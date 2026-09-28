@@ -156,9 +156,15 @@ export default function SelectTable({ navigation }) {
           </View>
         </View>
 
-        <Pressable style={styles.resetButton} onPress={handleResetData}>
-          <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
-        </Pressable>
+        <View style={styles.leftBottomRow}>
+          <Pressable style={styles.kitchenButton} onPress={() => navigation.navigate('OrderKitScreen')}>
+            <Text style={styles.kitchenButtonText}>เปิดหน้าครัว</Text>
+          </Pressable>
+
+          <Pressable style={styles.resetButton} onPress={handleResetData}>
+            <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.rightPanel}>
@@ -344,6 +350,22 @@ const styles = StyleSheet.create({
   },
 
   // ฝั่งซ้าย — ปุ่มล้างข้อมูล (ชิดล่างสุดของแผง)
+  leftBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  kitchenButton: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.orange.brand,
+  },
+  kitchenButtonText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.core.screenBg,
+  },
   resetButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

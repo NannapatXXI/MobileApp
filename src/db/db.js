@@ -7,7 +7,7 @@
 // - ทุกคำสั่งที่รับค่าจากผู้ใช้ ต้องส่งผ่าน ? เท่านั้น ห้ามต่อสตริง SQL เอง
 // - ราคาเก็บเป็น INTEGER หน่วยสตางค์เสมอ (ห้ามใช้ REAL)  ดำดำ
  
-export const DATABASE_NAME = 'restaurant_order_v6.db';
+export const DATABASE_NAME = 'restaurant_order_v7.db';
  
 // ---------------------------------------------------------------------------
 // 1) สร้างตาราง + index ทั้งหมด (รันครั้งเดียวตอนแอปเปิด — IF NOT EXISTS กันการสร้างซ้ำ)
@@ -85,7 +85,10 @@ export async function initDb(db) {
       note              TEXT,
       status            TEXT NOT NULL DEFAULT 'pending'
                           CHECK (status IN ('pending', 'cooking', 'served', 'cancelled')),
-      cancelled_at      TEXT
+      started_at        TEXT,
+      served_at         TEXT,
+      cancelled_at      TEXT,
+      cancel_reason     TEXT
     );
   `);
 
@@ -103,6 +106,27 @@ export async function initDb(db) {
   await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_bills_table_status ON bills (table_id, status);`);
   await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_order_rounds_bill ON order_rounds (bill_id);`);
   await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_order_items_round ON order_items (round_id);`);
+  await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items (status);`);
+
+  // ไฟล์ DB ที่สร้างจากบิลด์เก่าไม่มีคอลัมน์เวลาของครัว — CREATE TABLE IF NOT EXISTS ไม่เติมให้
+  // จึงต้องเช็คแล้ว ALTER เฉพาะคอลัมน์ที่ยังไม่มี (ปลอดภัยทั้งไฟล์ใหม่และไฟล์เก่า)
+  await ensureColumns(db, 'order_items', {
+    started_at: 'TEXT',
+    served_at: 'TEXT',
+    cancelled_at: 'TEXT',
+    cancel_reason: 'TEXT',
+  });
+}
+
+// เพิ่มคอลัมน์ที่ยังไม่มีในตาราง — ชื่อตาราง/คอลัมน์มาจากค่าคงที่ในโค้ด ไม่ใช่จากผู้ใช้
+// (SQLite ไม่รองรับการ bind ชื่อคอลัมน์เป็นพารามิเตอร์ จึงต้องต่อสตริงตรง ๆ)
+export async function ensureColumns(db, table, columns) {
+  const existing = await db.getAllAsync(`PRAGMA table_info(${table});`);
+  const have = new Set(existing.map((column) => column.name));
+  for (const [name, type] of Object.entries(columns)) {
+    if (have.has(name)) continue;
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${name} ${type};`);
+  }
 }
  
 // ---------------------------------------------------------------------------
@@ -299,22 +323,30 @@ export async function seedMockBill(db) {
 
   // unit_price คือราคาต่อจานที่ "รวม option แล้ว" (เหมือนตอนลูกค้ากดเพิ่มลงตะกร้าจริง)
   // option = ตัวเลือกที่แนบไปกับจานนั้น (ถ้ามี)
+  // orderedMinsAgo = สั่งมาเมื่อกี่นาทีแล้ว / statusMinsAgo = เปลี่ยนเป็นสถานะนี้เมื่อกี่นาทีแล้ว
+  // (ใช้แค่ตอนทดสอบจอครัว — ของจริงเวลามาจาก datetime('now') ตอนกดปุ่มใน queries_kitchen/queue.js)
   const MOCK_ROUNDS = [
-    [ // รอบที่ 1
-      { itemId: 1, unitPrice: 7000, qty: 2, note: 'ธรรมดา', status: 'served',
-        option: { optionId: 3, name: 'ไข่ดาว', price: 1000 } }, // กะเพราหมูสับ 60 + ไข่ดาว 10
-      { itemId: 3, unitPrice: 6500, qty: 1, note: '', status: 'served' },
-      { itemId: 4, unitPrice: 8000, qty: 1, note: '', status: 'served' },
-      { itemId: 7, unitPrice: 5500, qty: 2, note: '', status: 'served' },
-      { itemId: 17, unitPrice: 3500, qty: 2, note: '', status: 'served' },
-    ],
-    [ // รอบที่ 2
-      { itemId: 10, unitPrice: 5500, qty: 3, note: 'หวานน้อย', status: 'cooking' },
-      { itemId: 23, unitPrice: 3000, qty: 2, note: '', status: 'pending' },
-      { itemId: 6, unitPrice: 9000, qty: 1, note: 'เผ็ดน้อย', status: 'cooking' },
-      { itemId: 11, unitPrice: 5500, qty: 2, note: '', status: 'pending' },
-      { itemId: 25, unitPrice: 2000, qty: 4, note: '', status: 'pending' },
-    ],
+    { // รอบที่ 1
+      orderedMinsAgo: 42,
+      items: [
+        { itemId: 1, unitPrice: 7000, qty: 2, note: 'ธรรมดา', status: 'served', statusMinsAgo: 28,
+          option: { optionId: 3, name: 'ไข่ดาว', price: 1000 } }, // กะเพราหมูสับ 60 + ไข่ดาว 10
+        { itemId: 3, unitPrice: 6500, qty: 1, note: '', status: 'served', statusMinsAgo: 30 },
+        { itemId: 4, unitPrice: 8000, qty: 1, note: '', status: 'served', statusMinsAgo: 30 },
+        { itemId: 7, unitPrice: 5500, qty: 2, note: '', status: 'served', statusMinsAgo: 32 },
+        { itemId: 17, unitPrice: 3500, qty: 2, note: '', status: 'served', statusMinsAgo: 33 },
+      ],
+    },
+    { // รอบที่ 2
+      orderedMinsAgo: 9,
+      items: [
+        { itemId: 10, unitPrice: 5500, qty: 3, note: 'หวานน้อย', status: 'cooking', statusMinsAgo: 4 },
+        { itemId: 23, unitPrice: 3000, qty: 2, note: '', status: 'pending' },
+        { itemId: 6, unitPrice: 9000, qty: 1, note: 'เผ็ดน้อย', status: 'cooking', statusMinsAgo: 2 },
+        { itemId: 11, unitPrice: 5500, qty: 2, note: '', status: 'pending' },
+        { itemId: 25, unitPrice: 2000, qty: 4, note: '', status: 'pending' },
+      ],
+    },
   ];
 
   await db.withTransactionAsync(async () => {
@@ -325,16 +357,33 @@ export async function seedMockBill(db) {
     const billId = bill.lastInsertRowId;
 
     for (let i = 0; i < MOCK_ROUNDS.length; i++) {
-      const round = await db.runAsync(
-        `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, ?, datetime('now'))`,
-        [billId, i + 1]
+      const round = MOCK_ROUNDS[i];
+      const roundRow = await db.runAsync(
+        `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, ?, datetime('now', ?))`,
+        [billId, i + 1, `-${round.orderedMinsAgo} minutes`]
       );
-      const roundId = round.lastInsertRowId;
+      const roundId = roundRow.lastInsertRowId;
 
-      for (const item of MOCK_ROUNDS[i]) {
+      for (const item of round.items) {
+        // pending ยังไม่เคยเริ่มทำ/เสิร์ฟ -> ทิ้งเวลาไว้ NULL
+        const startedOffset =
+          item.status === 'pending' ? null : `-${item.statusMinsAgo} minutes`;
+        const servedOffset = item.status === 'served' ? `-${item.statusMinsAgo} minutes` : null;
+
         const orderItem = await db.runAsync(
-          `INSERT INTO order_items (round_id, item_id, unit_price_satang, quantity, note, status) VALUES (?, ?, ?, ?, ?, ?)`,
-          [roundId, item.itemId, item.unitPrice, item.qty, item.note, item.status]
+          `INSERT INTO order_items
+             (round_id, item_id, unit_price_satang, quantity, note, status, started_at, served_at)
+           VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?), datetime('now', ?))`,
+          [
+            roundId,
+            item.itemId,
+            item.unitPrice,
+            item.qty,
+            item.note,
+            item.status,
+            startedOffset,
+            servedOffset,
+          ]
         );
 
         if (item.option) {
