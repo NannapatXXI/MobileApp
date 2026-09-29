@@ -1,59 +1,24 @@
-import { View ,Text,ScrollView,StyleSheet,Dimensions,Pressable,FlatList} from 'react-native';
-import { useState } from 'react';
+import { View ,Text,StyleSheet,Pressable} from 'react-native';
+import { useState, useEffect } from 'react';
+import { useSQLiteContext } from 'expo-sqlite';
 import BillOrder from '../../component/BillOrder';
+import { getBillWithRounds } from '../../db/db';
+import { billToOrders, calcBillTotals, toThaiTime } from '../../utils/bill';
 
 
-export default function DetailScreen({ navigation }) {
-  
-  const tableNumber = 5;
-  const tableTime = '12.56'
-  const orderamount = 7
-  const billId = '#A-1042'
+export default function DetailScreen({ route, navigation }) {
+  const { billId, tableId } = route.params ?? {};
+  const db = useSQLiteContext();
+  const [bill, setBill] = useState(null);
 
-  const orders = [
-    {
-      round: 1,
-      sentTime: '18:12',
-      status: 'เสิร์ฟครบ',
-      items: [
-        { id: '1', name: 'ข้าวผัดกุ้ง', note: 'ธรรมดา', price: 120, qty: 2 },
-        { id: '2', name: 'คะน้าน้ำมันหอย', note: 'ใส่หมูกรอบ', price: 105, qty: 1 },
-      ]
-    },
-    {
-      round: 2,
-      sentTime: '18:52',
-      status: 'กำลังทำ',
-      items: [
-        { id: '3', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-        { id: '4', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-      ]
-    },{
-      round: 3,
-      sentTime: '18:52',
-      status: 'กำลังทำ',
-      items: [
-        { id: '3', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-        { id: '4', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-      ]
-    },{
-      round: 4,
-      sentTime: '18:52',
-      status: 'กำลังทำ',
-      items: [
-        { id: '3', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-        { id: '4', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-      ]
-    },{
-      round: 5,
-      sentTime: '18:52',
-      status: 'กำลังทำ',
-      items: [
-        { id: '3', name: 'ผัดกะเพราหมูสับ', note: 'พิเศษ, ไข่ดาว', price: 120, qty: 2 },
-        { id: '4', name: 'ข้าวสวย', note: '', price: 15, qty: 4 },
-      ]
-    }
-  ];
+  useEffect(() => {
+    if (!billId) return;
+    getBillWithRounds(db, billId).then(setBill);
+  }, [db, billId]);
+
+  const orders = billToOrders(bill);
+  const { subtotal, service, vat, total } = calcBillTotals(orders);
+  const itemCount = orders.reduce((sum, r) => sum + r.items.length, 0);
 
     return (
       <View style={styles.content}>
@@ -62,8 +27,8 @@ export default function DetailScreen({ navigation }) {
            
            
             <View style={{paddingBottom:16}}>
-              <Text style={{fontSize:24,paddingBottom:12, paddingTop:20,fontWeight:'bold'}}>สรุปบิล {billId}</Text>
-              <Text>โต้ะ {tableNumber} เปิด {tableTime} รอบ {orderamount} รายการ</Text>
+              <Text style={{fontSize:24,paddingBottom:12, paddingTop:20,fontWeight:'bold'}}>สรุปบิล #{billId}</Text>
+              <Text>โต๊ะ {bill?.table_number ?? '-'} · เปิด {toThaiTime(bill?.opened_at)} · {orders.length} รอบ · {itemCount} รายการ</Text>
             </View>
             <BillOrder orders={orders}/>
            
@@ -73,27 +38,27 @@ export default function DetailScreen({ navigation }) {
                 <Text style={{fontSize:24,paddingBottom:12, paddingTop:20,fontWeight:'bold'}} >ยอดที่ต้องชำระ</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom:10}}>
                   <Text  style={{fontSize:18,color: '#42544A'}}>รวมค่าอาหาร</Text>
-                  <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿1,231 </Text>
+                  <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{subtotal.toLocaleString()}</Text>
                 </View>
                
                 <View style={{flexDirection:'row', justifyContent: 'space-between', paddingBottom:10 }}>
                 
                         <Text style={{fontSize:18,color: '#42544A'}}>ค่าบริการ 10%</Text>
-                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿121 </Text>
+                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{service.toLocaleString()}</Text>
                   
                  
                    
                 </View>
                 <View style={{flexDirection:'row', justifyContent: 'space-between' , paddingBottom:10}}>
                        <Text  style={{fontSize:18,color: '#42544A'}}>ภาษีมูลค่าเพิ่ม 7% </Text>
-                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}} >฿70 </Text>
+                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}} >฿{vat.toLocaleString()}</Text>
                   
                 </View>
                 <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0EDE4', paddingTop:20 }}/>
 
                 <View style={{flexDirection:'row', justifyContent: 'space-between', paddingTop:20 }}>
                   <Text style={{fontSize:24,fontWeight:'bold'}}>ยอดรวมทั้งบิล</Text>
-                  <Text style={{fontSize:30,fontWeight:'bold'}} >฿1,250</Text>
+                  <Text style={{fontSize:30,fontWeight:'bold'}} >฿{total.toLocaleString()}</Text>
                 </View>
 
 
@@ -101,26 +66,26 @@ export default function DetailScreen({ navigation }) {
                   <View style={{padding:30}}>
                     <Text style={{fontSize:14, fontWeight:'bold'}}>ชำระที่เคาน์เตอร์</Text>
                     <View style={{paddingTop:10}}>
-                        <Text style={{fontSize:14,color: '#42544A'}}>แจ้งเลขบิล {billId} ที่เคาน์เตอร์ หนักงานจะปิดบิลและออกใบเสร็จให้</Text>
+                        <Text style={{fontSize:14,color: '#42544A'}}>แจ้งเลขบิล #{billId} ที่เคาน์เตอร์ พนักงานจะปิดบิลและออกใบเสร็จให้</Text>
                     </View>
                   </View>
                 
                 </View>
             <View style={{paddingTop:140}}>
-                    <Pressable style={{borderRadius:20,backgroundColor:'#16281F',marginTop:20}}  onPress={() => navigation.navigate('Bill' )} >
+                    <Pressable style={{borderRadius:20,backgroundColor:'#16281F',marginTop:20}}  onPress={() => navigation.navigate('Bill', { billId })} >
                       <View style={{justifyContent:'center',alignItems:'center',padding:30}}>
                             <Text style={{fontSize:20,fontWeight:'bold',color:'#fff'}}>พิมพ์ใบเสร็จเป็นไฟล์</Text>
                       </View>
 
                     </Pressable>
-                    <Pressable style={{borderRadius:20,backgroundColor:'#FAFDF7',marginTop:20 ,borderColor:'#E0EDE4',borderWidth:1}} onPress={() => navigation.navigate('MenuScreen' )}>
+                    <Pressable style={{borderRadius:20,backgroundColor:'#FAFDF7',marginTop:20 ,borderColor:'#E0EDE4',borderWidth:1}} onPress={() => navigation.navigate('MenuScreen', { billId, tableId })}>
                       <View style={{justifyContent:'center',alignItems:'center',padding:30}}>
                             <Text style={{fontSize:20,fontWeight:'bold',color:'#42544A'}}>สั่งเพิ่ม</Text>
                       </View>
 
                     </Pressable>
 
-                    <Pressable  onPress={console.log("เก็บเงินโต๊ะ "+tableNumber)}>
+                    <Pressable  onPress={() => console.log('เก็บเงินโต๊ะ ' + bill?.table_number)}>
                       <View style={{paddingTop:20}}>
                             <Text style={{textAlign:'center'}}> เรียกพนักงานมาเก็บเงินที่โต๊ะ </Text>
                       </View>

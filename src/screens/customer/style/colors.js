@@ -64,6 +64,7 @@ export function withAlpha(hex, alphaValue) {
 
 export const alpha = {
   borderMin: withAlpha(colors.core.darkGreen, 0.04),   // เส้นขอบ/เงาบางสุด
+  borderMid: withAlpha(colors.core.darkGreen, 0.14),   // เส้นคั่นระหว่างส่วน (การ์ด/รายการ)
   borderMax: withAlpha(colors.core.darkGreen, 0.5),    // เส้นขอบ/เงาเข้มสุด
   onDarkMin: withAlpha(colors.core.screenBg, 0.15),    // ตัวหนังสือบนพื้นเข้ม จางสุด
   onDarkMax: withAlpha(colors.core.screenBg, 0.85),    // ตัวหนังสือบนพื้นเข้ม เข้มสุด
