@@ -29,7 +29,7 @@ export default function ReviewScreen({ route, navigation }) {
     try {
       await submitOrderRound(db, { billId, cart });
       clearCart();
-      navigation.goBack(); // ถอยกลับไป MenuScreen ตัวเดิมที่อยู่ใต้ Review พอดี ไม่ใช้ navigate() ที่พฤติกรรมไม่ชัดเจน
+      navigation.navigate('SendToKitchen', { billId, tableId });
     } finally {
       setSubmitting(false);
     }
@@ -131,7 +131,7 @@ export default function ReviewScreen({ route, navigation }) {
           </Text>
         </View>
 
-        <Pressable style={styles.submitButton} disabled={submitting}  onPress={() => navigation.navigate('Home' )}>
+        <Pressable style={styles.submitButton} disabled={submitting} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>ส่งเข้าครัว · รอบที่ {roundNumber}</Text>
         </Pressable>
 

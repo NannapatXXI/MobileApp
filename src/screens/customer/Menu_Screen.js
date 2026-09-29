@@ -25,43 +25,33 @@ export default function MenuScreen({ route, navigation }) {
 
   const roundTotal = cart.reduce((sum, c) => sum + c.unit_price_satang * c.quantity, 0);
 
+  // โหลดหมวดหมู่ แล้วเลือกหมวดแรกให้อัตโนมัติ
   useEffect(() => {
-    getCategoriesWithCounts(db).then(setCategories)
+    getCategoriesWithCounts(db).then((rows) => {
+      setCategories(rows);
+      if (rows.length > 0) setSelectedCategoryId(rows[0].category_id);
+    });
+  }, [db]);
 
-  }, [db])
-
-  // พอ categories โหลดมาครั้งแรก ให้เลือกหมวดแรกอัตโนมัติ (ยังไม่เคยเลือกอะไรเลย)
-  useEffect(() => {
-    if (selectedCategoryId == null && categories.length > 0) {
-      setSelectedCategoryId(categories[0].category_id);
-    }
-  }, [categories, selectedCategoryId]);
-
+  // โหลดเมนูใหม่ทุกครั้งที่เปลี่ยนหมวด / พิมพ์ค้นหา / กดสวิตช์
   useEffect(() => {
     if (!selectedCategoryId) return;
-    getMenuItems(db, { categoryId: selectedCategoryId, search: searchText, onlyAvailable }).then(setMenuItems)
+    getMenuItems(db, { categoryId: selectedCategoryId, search: searchText, onlyAvailable }).then(setMenuItems);
   }, [db, selectedCategoryId, searchText, onlyAvailable]);
 
-
-
-
-  // ReviewScreen หลังส่งครัวสำเร็จ ต้องรีเฟรชทุกครั้งที่กลับมา ไม่งั้นเลขที่โชว์จะค้าง
-  // รีหน้าจอทุกครั้งที่กลับมาหน้าเมนู
+  // นับจำนวนรอบใหม่ทุกครั้งที่กลับมาหน้านี้ (เช่น หลังส่งครัว) ไม่งั้นเลขรอบจะค้าง
   useFocusEffect(
     useCallback(() => {
       getBillRoundCount(db, billId).then(setRoundCount);
     }, [db, billId])
   );
 
-  // cart มาจาก CartContext แล้ว (addToCart/removeFromCart) ไม่ต้องดัก route.params อีกต่อไป
-
-
   return (
     <View style={styles.screen}>
       
       
       <View style={styles.leftPanel}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('SelectTable')}>
+        <TouchableOpacity style={styles.backButton} onPress={() =>  navigation.navigate('SelectTable')}>
           <Text style={styles.backButtonText}>← กลับไปหน้าเลือกโต๊ะ</Text>
         </TouchableOpacity>
         <Text style={styles.restaurantName}> ครัว 4 สหาย </Text>
