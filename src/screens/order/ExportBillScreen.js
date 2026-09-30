@@ -53,7 +53,7 @@ function buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax
         </style>
       </head>
       <body>
-        <h1>ครัวป้าน้อย</h1>
+        <h1>ครัวสี่สหาย</h1>
         <p class="center">${title}<br/>123 ถ.นิมมานเหมินท์ เชียงใหม่<br/>TAX ID 0505561000000</p>
         <hr/>
         <table>
@@ -69,7 +69,7 @@ function buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax
           <tr><td>VAT 7%</td><td class="right">${vat.toLocaleString()}</td></tr>
           <tr class="total"><td>TOTAL</td><td class="right">฿${total.toLocaleString()}</td></tr>
         </table>
-        <p class="center">ขอบคุณที่มาทานค่ะ</p>
+        <p class="center">ขอบคุณที่มาทานครับสุดหล่อ</p>
       </body>
     </html>
   `;
