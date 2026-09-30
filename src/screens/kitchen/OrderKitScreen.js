@@ -8,12 +8,14 @@ import {
   Modal,
   ActivityIndicator,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import colors, { alpha } from '../customer/style/colors';
 import { useState, useEffect, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
-import { formatNowHM, getWaitMinutes } from '../../utils/time';
+import { formatNowHM, getWaitMinutes, formatBangkokHM } from '../../utils/time';
+import { getOpenBills, closeBill } from '../../db/queries_kitchen/bills';
 
 // ทุก query อ่านจากฐานข้อมูลชุดเดียวกับฝั่งลูกค้า (bills -> order_rounds -> order_items)
 // รายการในคิวคือสิ่งที่ลูกค้ากด "ส่งเข้าครัว" ใส่ DB ไว้ ไม่มีข้อมูลชุดแยกของครัว
@@ -299,9 +301,11 @@ export default function OrderKitScreen({ navigation }) {
   const [gridWidth, setGridWidth] = useState(0);
 
   // null = ปิดหน้าต่าง / 'history' = ประวัติที่เสิร์ฟแล้ว / 'cancelled' = รายการที่ถูกยกเลิก
+  // 'bills' = รายการบิลที่เปิดอยู่ (ใช้ปิดบิล)
   const [modal, setModal] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [cancelledData, setCancelledData] = useState([]);
+  const [openBillsData, setOpenBillsData] = useState([]);
   const [isModalLoading, setIsModalLoading] = useState(false);
 
   // ---- โหลดข้อมูลจาก DB ----
@@ -419,6 +423,55 @@ export default function OrderKitScreen({ navigation }) {
     }
   }
 
+  // เปิดหน้าต่าง "ปิดบิล" — โหลดบิลที่ยังเปิดอยู่ทั้งหมด
+  async function openBillsModal() {
+    setModal('bills');
+    setIsModalLoading(true);
+    try {
+      const billList = await getOpenBills(db);
+      setOpenBillsData(billList);
+    } finally {
+      setIsModalLoading(false);
+    }
+  }
+
+  // กดปิดบิล
+  // - ยังมีรายการที่ครัวยังไม่เสิร์ฟ → ไม่ให้ปิด ต้องเสิร์ฟหรือยกเลิกให้ครบก่อน
+  // - เสิร์ฟครบแล้ว → ถามยืนยันก่อนปิด
+  function handleCloseBill(bill) {
+    const title = 'โต๊ะ ' + bill.table_number + ' · บิล #' + bill.bill_id;
+
+    if (bill.unserved_count > 0) {
+      Alert.alert(
+        'ยังปิดบิลไม่ได้',
+        title + '\nยังมี ' + bill.unserved_count +
+          ' รายการที่ครัวยังไม่เสิร์ฟ\nให้กดเสิร์ฟหรือยกเลิกรายการเหล่านั้นก่อน'
+      );
+      return;
+    }
+
+    const message = title + ' · ยอด ฿' + (bill.total_satang / 100).toLocaleString() +
+      '\nปิดแล้วโต๊ะนี้จะกลับเป็นว่าง และเปิดบิลใหม่ได้';
+
+    Alert.alert('ปิดบิล?', message, [
+      { text: 'ยกเลิก', style: 'cancel' },
+      {
+        text: 'ปิดบิล',
+        style: 'destructive',
+        onPress: async function () {
+          const changed = await closeBill(db, bill.bill_id);
+          // 0 = ระหว่างที่กดยืนยัน มีออร์เดอร์ใหม่เข้ามาในบิลนี้ หรือบิลถูกปิดไปแล้ว
+          if (changed === 0) {
+            Alert.alert('ปิดบิลไม่สำเร็จ', 'บิลนี้มีรายการใหม่ที่ยังไม่เสิร์ฟ หรือถูกปิดไปแล้ว');
+          }
+          // โหลดรายการบิลเปิดใหม่ บิลที่เพิ่งปิดจะหายไปจากหน้าต่างนี้
+          const billList = await getOpenBills(db);
+          setOpenBillsData(billList);
+        },
+      },
+    ]);
+  }
+
   function closeModal() {
     setModal(null);
   }
@@ -510,7 +563,7 @@ export default function OrderKitScreen({ navigation }) {
           <View style={styles.roundCardHeadLeft}>
             <Text style={styles.tableName}>โต๊ะ {round.table_number}</Text>
             <Text style={styles.roundMeta}>
-              รอบที่ {round.round_number} · {round.items.length} รายการ
+              รอบที่ {round.round_number} · บิล #{round.bill_id} · {round.items.length} รายการ
             </Text>
           </View>
           <View style={styles.roundTimeCol}>
@@ -632,6 +685,25 @@ export default function OrderKitScreen({ navigation }) {
     );
   }
 
+  function renderOpenBillRow(bill) {
+    return (
+      <View key={bill.bill_id} style={[styles.modalListItem, styles.billRow]}>
+        <View style={styles.billRowInfo}>
+          <Text style={styles.modalListItemTitle}>
+            โต๊ะ {bill.table_number} · บิล #{bill.bill_id}
+          </Text>
+          <Text style={styles.modalListItemMeta}>
+            เปิด {formatBangkokHM(bill.opened_at)} · {bill.round_count} รอบ · ฿
+            {(bill.total_satang / 100).toLocaleString()}
+          </Text>
+        </View>
+        <Pressable style={styles.closeBillButton} onPress={function () { handleCloseBill(bill); }}>
+          <Text style={styles.closeBillButtonText}>ปิดบิล</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   // คำอธิบายสีของจุดในสัญลักษณ์ด้านล่างจอ
   const LEGEND_ITEMS = [
     { label: 'รอทำ', color: colors.text.label },
@@ -693,12 +765,20 @@ export default function OrderKitScreen({ navigation }) {
     } else {
       modalListContent = cancelledData.map(renderCancelledRow);
     }
+  } else if (modal === 'bills') {
+    if (openBillsData.length === 0) {
+      modalListContent = <Text style={styles.modalEmptyText}>ไม่มีบิลที่เปิดอยู่</Text>;
+    } else {
+      modalListContent = openBillsData.map(renderOpenBillRow);
+    }
   }
 
   // ชื่อหน้าต่างเล็ก (เปลี่ยนตามปุ่มที่กด)
   let modalTitle = '';
   if (modal === 'history') {
     modalTitle = 'ประวัติที่เสิร์ฟแล้ว';
+  } else if (modal === 'bills') {
+    modalTitle = 'ปิดบิล · บิลที่เปิดอยู่';
   } else {
     modalTitle = 'รายการที่ถูกยกเลิก';
   }
@@ -712,7 +792,7 @@ export default function OrderKitScreen({ navigation }) {
         </View>
 
         <View style={styles.headerRight}>
-          <Text style={styles.sortLabel}>เรียง: เวลาที่สั่ง ใหม่ → เก่า</Text>
+          <Text style={styles.sortLabel}>เรียง: เวลาที่สั่ง เก่า → ใหม่</Text>
           <Text style={styles.clockText}>{formatNowHM(now)}</Text>
         </View>
       </View>
@@ -750,6 +830,9 @@ export default function OrderKitScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.75} style={styles.footerButton} onPress={openCancelledModal}>
             <Text style={styles.footerButtonText}>รายการที่ถูกยกเลิก</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.75} style={styles.footerButtonPrimary} onPress={openBillsModal}>
+            <Text style={styles.footerButtonPrimaryText}>ปิดบิล</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1121,6 +1204,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.core.darkGreen,
   },
+  // ปุ่มปิดบิล — พื้นเข้ม ให้เด่นกว่าปุ่มดูข้อมูลอื่น
+  footerButtonPrimary: {
+    backgroundColor: colors.core.darkGreen,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+  },
+  footerButtonPrimaryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.core.screenBg,
+  },
 
   // ---- หน้าต่างเล็ก ----
   modalOverlay: {
@@ -1189,5 +1284,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.placeholder,
     marginTop: 5,
+  },
+
+  // ---- แถวบิลในหน้าต่างปิดบิล ----
+  billRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  billRowInfo: {
+    flex: 1,
+  },
+  closeBillButton: {
+    backgroundColor: colors.core.darkGreen,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  closeBillButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.core.screenBg,
   },
 });

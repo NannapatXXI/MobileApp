@@ -29,7 +29,7 @@ const DB_STATUS_BY_UI = {
 // คิวครัว
 // ---------------------------------------------------------------------------
 
-// ใบออร์เดอร์ทั้งหมดที่ครัวต้องเห็น เรียงตามเวลาที่สั่งใหม่ -> เก่า (ออร์เดอร์ล่าสุดขึ้นก่อน)
+// ใบออร์เดอร์ทั้งหมดที่ครัวต้องเห็น เรียงตามเวลาที่สั่งเก่า -> ใหม่ (ออร์เดอร์ที่รอนานสุดขึ้นก่อน ตามโจทย์ ก7)
 // เงื่อนไข "เห็น" = ยังมีงานค้าง (pending/cooking) OR สั่งภายในวันนี้ตามเวลาไทย
 //   → ใบที่เสิร์ฟครบแล้วของเมื่อวานไม่ต้องมากวนอยู่ในคิว แต่ของวันนี้ยังเห็นในฟิลเตอร์ "เสิร์ฟแล้ว"
 export async function getKitchenQueue(db) {
@@ -47,9 +47,9 @@ export async function getKitchenQueue(db) {
               SELECT 1 FROM order_items oi
               WHERE oi.round_id = r.round_id AND oi.status IN ('pending', 'cooking')
             )
-            OR date(r.ordered_at, '+7 hours') = date('now')
+            OR date(r.ordered_at, '+7 hours') = date('now', '+7 hours')
           )
-    ORDER BY r.ordered_at DESC, r.round_id DESC
+    ORDER BY r.ordered_at ASC, r.round_id ASC
   `);
 
   for (const round of rounds) {
@@ -61,7 +61,7 @@ export async function getKitchenQueue(db) {
   return rounds;
 }
 
-// แผง "คิวถัดไป" = ใบที่ยังไม่เริ่มทำเลย (ทุกรายการยังรอทำอยู่) เรียงเวลาที่สั่งใหม่ -> เก่า
+// แผง "คิวถัดไป" = ใบที่ยังไม่เริ่มทำเลย (ทุกรายการยังรอทำอยู่) เรียงเวลาที่สั่งเก่า -> ใหม่
 export async function getNextQueueRounds(db) {
   const rows = await db.getAllAsync(`
     SELECT r.round_id, r.round_number, r.ordered_at, t.table_number,
@@ -78,7 +78,7 @@ export async function getNextQueueRounds(db) {
             SELECT 1 FROM order_items oi
             WHERE oi.round_id = r.round_id AND oi.status IN ('cooking', 'served')
           )
-    ORDER BY r.ordered_at DESC, r.round_id DESC
+    ORDER BY r.ordered_at ASC, r.round_id ASC
   `);
 
   return rows.map((r) => ({
