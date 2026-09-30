@@ -4,11 +4,12 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import colors, { withAlpha } from './style/colors';
 
-// แหล่งข้อมูล — รวม Salesqueries.js มาไว้ในไฟล์นี้ (เหมือน MenuSettingsScreen)
-// ตอนต่อ SQL จริง เปลี่ยนแค่ import นี้ ไฟล์ใหม่ต้องส่งออก (รับ db ตัวแรก คืน Promise):
+// แหล่งข้อมูล — ดึงยอดขายจาก SQLite จริง (Salesdb.js)
+// ฟังก์ชันที่ใช้ (รับ db ตัวแรก คืน Promise):
 // getDailySummary · getCategoryBreakdown · getBillsForDate (รับ db, date) ·
 // getLatestBillDate(db) · getBillCountsByDate(db) → { 'YYYY-MM-DD': จำนวนบิล}  (เงินเป็นสตางค์ วันที่เวลาไทย)
-import * as source from '../../db/Mocksbill/Mockdb';
+// ถ้าอยากดูหน้าจอกับข้อมูลจำลองย้อนหลัง 12 เดือน เปลี่ยนเป็น '../../db/Mocksbill/Mockdb' ชั่วคราวได้
+import * as source from '../../db/Mocksbill/Salesdb';
 
 // จัดกลุ่มวันที่ที่มีบิลตามเดือน → [{ month, days, bills, dates }] เดือนใหม่→เก่า วันใหม่→เก่า
 async function getMonthList(db) {

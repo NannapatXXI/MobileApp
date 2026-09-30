@@ -743,7 +743,7 @@ export default function OrderKitScreen({ navigation }) {
 
         <View style={styles.footerButtonsRow}>
           <TouchableOpacity activeOpacity={0.75} style={styles.footerButtonGhost} onPress={goSelectTable}>
-            <Text style={styles.footerButtonText}>← ไปหน้าเลือกโต๊ะ</Text>
+            <Text style={styles.footerButtonText}>ไปหน้าเลือกโต๊ะ</Text>
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.75} style={styles.footerButton} onPress={openHistoryModal}>
             <Text style={styles.footerButtonText}>ประวัติที่เสิร์ฟแล้ว</Text>

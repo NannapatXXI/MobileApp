@@ -105,6 +105,14 @@ export default function SelectTable({ navigation }) {
     });
   }
 
+  function handleEnterToSeeBill() {
+    if (!canEnterExistingBill) return;
+    navigation.navigate('SendToKitchen', {
+      billId: selectedTable.bill_id,
+      tableId: selectedTable.table_id,
+    });
+  }
+
   function handleResetData() {
     Alert.alert(
       'ล้างข้อมูลการขายทั้งหมด?',
@@ -128,7 +136,7 @@ export default function SelectTable({ navigation }) {
     <View style={styles.screen}>
       <View style={styles.leftPanel}>
         <View>
-          <Text style={styles.kicker}>KRUA PA NOI · TABLE UNIT</Text>
+          <Text style={styles.kicker}>KRUA SI SA-HAI · TABLE UNIT</Text>
           <Text style={styles.greetingTitle}>สวัสดีครับ{'\n'}เริ่มสั่งได้เลย</Text>
           <Text style={styles.greetingSubtitle}>
             แตะหมายเลขโต๊ะที่คุณนั่งอยู่จากผังด้านขวา แล้วเปิดบิลใหม่หรือเข้าบิลที่ค้างอยู่
@@ -157,12 +165,13 @@ export default function SelectTable({ navigation }) {
         </View>
 
         <View style={styles.leftBottomRow}>
-          <Pressable style={styles.kitchenButton} onPress={() => navigation.navigate('OrderKitScreen')}>
-            <Text style={styles.kitchenButtonText}>เปิดหน้าครัว</Text>
-          </Pressable>
+         
 
           <Pressable style={styles.resetButton} onPress={handleResetData}>
             <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
+          </Pressable>
+          <Pressable style={styles.kitchenButton} onPress={() => navigation.navigate('StaffScreen')}>
+            <Text style={styles.kitchenButtonText}>staff</Text>
           </Pressable>
         </View>
       </View>
@@ -250,9 +259,24 @@ export default function SelectTable({ navigation }) {
               เข้าบิลที่ค้างอยู่
             </Text>
           </Pressable>
+          <Pressable
+            onPress={handleEnterToSeeBill}
+            disabled={!canEnterExistingBill}
+            style={[styles.secondaryButton, !canEnterExistingBill && styles.secondaryButtonDisabled]}
+          >
+            <Text
+              style={[
+                styles.secondaryButtonText,
+                !canEnterExistingBill && styles.secondaryButtonTextDisabled,
+              ]}
+            >
+              ดูรายการที่สั่ง
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>
+    
   );
 }
 

@@ -411,7 +411,7 @@ export default function RoundStatusScreen({ route, navigation }) {
   }
 
   // ปุ่ม "ทั้งใบ → เสิร์ฟแล้ว": ตอนกำลังบันทึกให้โชว์ loading
-  let markServedButtonContent = <Text style={styles.markServedButtonText}>ทั้งใบ → เสิร์ฟแล้ว</Text>;
+  let markServedButtonContent = <Text style={styles.markServedButtonText}>เปลี่ยนทั้งใบเป็นเสิร์ฟแล้ว</Text>;
   if (updatingKey === 'ROUND') {
     markServedButtonContent = (
       <ActivityIndicator size="small" color={colors.core.screenBg} />
@@ -518,7 +518,7 @@ export default function RoundStatusScreen({ route, navigation }) {
       {/* ซ้าย — รายการใบออร์เดอร์ที่กำลังทำงานอยู่ */}
       <View style={styles.sidebar}>
         <TouchableOpacity style={styles.backButton} onPress={function () { navigation.goBack(); }}>
-          <Text style={styles.backButtonText}>← กลับคิวครัว</Text>
+          <Text style={styles.backButtonText}> กลับคิวครัว</Text>
         </TouchableOpacity>
         <ScrollView contentContainerStyle={styles.sidebarList}>
           {rounds.map(renderSidebarCard)}

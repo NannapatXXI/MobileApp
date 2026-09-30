@@ -132,15 +132,17 @@ export default function PreSendToKitchen({ route, navigation }) {
           </Pressable>
           <Pressable
             style={{ flex: 3, backgroundColor: '#FFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E0EDE4' }}
+            onPress={() => navigation.navigate('SelectTable')}
+          >
+            <Text style={{ color: '#2F6B4F', fontWeight: 'bold', fontSize: 16 }}>กลับหน้าหลัก</Text>
+          </Pressable>
+          <Pressable
+            style={{ flex: 3, backgroundColor: '#FFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E0EDE4' }}
             onPress={() => navigation.navigate('Detail', { billId, tableId })}
           >
             <Text style={{ color: '#2F6B4F', fontWeight: 'bold', fontSize: 16 }}>ดูสรุปบิล</Text>
           </Pressable>
-          <Pressable
-            style={{ flex: 3, backgroundColor: '#FFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E0EDE4' }}
-          >
-            <Text style={{ color: '#2F6B4F', fontWeight: 'bold', fontSize: 16 }}>เรียกพนักงาน</Text>
-          </Pressable>
+         
         </View>
       </View>
     </View>

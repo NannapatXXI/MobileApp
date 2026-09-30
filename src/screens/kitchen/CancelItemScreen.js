@@ -434,7 +434,7 @@ export default function CancelItemScreen({ route, navigation }) {
         {/* ส่วนบน (ตายตัว) */}
         <View style={styles.leftTop}>
           <TouchableOpacity style={styles.backButton} onPress={function () { navigation.goBack(); }}>
-            <Text style={styles.backButtonText}>← กลับ</Text>
+            <Text style={styles.backButtonText}>กลับ</Text>
           </TouchableOpacity>
 
           <Text style={styles.roundTitle}>

@@ -85,9 +85,9 @@ export default function DetailScreen({ route, navigation }) {
 
                     </Pressable>
 
-                    <Pressable  onPress={() => console.log('เก็บเงินโต๊ะ ' + bill?.table_number)}>
+                    <Pressable   onPress={() => navigation.navigate('SelectTable')}>
                       <View style={{paddingTop:20}}>
-                            <Text style={{textAlign:'center'}}> เรียกพนักงานมาเก็บเงินที่โต๊ะ </Text>
+                            <Text style={{textAlign:'center'}}> กลับหน้าหลัก </Text>
                       </View>
                       
                     </Pressable>

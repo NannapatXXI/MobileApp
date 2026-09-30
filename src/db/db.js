@@ -7,7 +7,8 @@
 // - ทุกคำสั่งที่รับค่าจากผู้ใช้ ต้องส่งผ่าน ? เท่านั้น ห้ามต่อสตริง SQL เอง
 // - ราคาเก็บเป็น INTEGER หน่วยสตางค์เสมอ (ห้ามใช้ REAL)  ดำดำ
  
-export const DATABASE_NAME = 'restaurant_order_v7.db';
+// ตั้งชื่อเฉพาะของโปรเจกต์ ไม่ให้ชนกับไฟล์ DB ของโปรเจกต์อื่นในเครื่อง
+export const DATABASE_NAME = 'krua4sahai_finalproject.db';
  
 // ---------------------------------------------------------------------------
 // 1) สร้างตาราง + index ทั้งหมด (รันครั้งเดียวตอนแอปเปิด — IF NOT EXISTS กันการสร้างซ้ำ)
@@ -110,22 +111,21 @@ export async function initDb(db) {
 
   // ไฟล์ DB ที่สร้างจากบิลด์เก่าไม่มีคอลัมน์เวลาของครัว — CREATE TABLE IF NOT EXISTS ไม่เติมให้
   // จึงต้องเช็คแล้ว ALTER เฉพาะคอลัมน์ที่ยังไม่มี (ปลอดภัยทั้งไฟล์ใหม่และไฟล์เก่า)
-  await ensureColumns(db, 'order_items', {
-    started_at: 'TEXT',
-    served_at: 'TEXT',
-    cancelled_at: 'TEXT',
-    cancel_reason: 'TEXT',
-  });
-}
+  // เขียน SQL ตรง ๆ ทีละคอลัมน์ ไม่ต่อสตริงใด ๆ เข้าไปในคำสั่ง
+  const columns = await db.getAllAsync('PRAGMA table_info(order_items);');
+  const have = columns.map((column) => column.name);
 
-// เพิ่มคอลัมน์ที่ยังไม่มีในตาราง — ชื่อตาราง/คอลัมน์มาจากค่าคงที่ในโค้ด ไม่ใช่จากผู้ใช้
-// (SQLite ไม่รองรับการ bind ชื่อคอลัมน์เป็นพารามิเตอร์ จึงต้องต่อสตริงตรง ๆ)
-export async function ensureColumns(db, table, columns) {
-  const existing = await db.getAllAsync(`PRAGMA table_info(${table});`);
-  const have = new Set(existing.map((column) => column.name));
-  for (const [name, type] of Object.entries(columns)) {
-    if (have.has(name)) continue;
-    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${name} ${type};`);
+  if (!have.includes('started_at')) {
+    await db.execAsync('ALTER TABLE order_items ADD COLUMN started_at TEXT;');
+  }
+  if (!have.includes('served_at')) {
+    await db.execAsync('ALTER TABLE order_items ADD COLUMN served_at TEXT;');
+  }
+  if (!have.includes('cancelled_at')) {
+    await db.execAsync('ALTER TABLE order_items ADD COLUMN cancelled_at TEXT;');
+  }
+  if (!have.includes('cancel_reason')) {
+    await db.execAsync('ALTER TABLE order_items ADD COLUMN cancel_reason TEXT;');
   }
 }
  

@@ -8,6 +8,7 @@ const STAFF_MODES = [
     avatarColor: colors.core.brandGreen,
     title: 'จอครัว',
     description: 'คิวออร์เดอร์ · เปลี่ยนสถานะ · ยกเลิกรายการ',
+    route: 'OrderKitScreen',
   },
   {
     key: 'manage',

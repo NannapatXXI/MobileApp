@@ -191,14 +191,17 @@ export function getMockDb() {
           else if (isOpen && latestRound) status = pick(['pending', 'cooking', 'cooking']);
 
           orderItemId++;
+          // สุ่มตัวเลือกเพิ่มเติมก่อน เพราะ unit_price_satang ต้อง "รวมราคา option แล้ว"
+          // เหมือนตอนลูกค้ากดเพิ่มลงตะกร้าจริง (Item_Detail_Screen)
+          const opts = extrasByItem[it.item_id];
+          const o = opts && rng() < 0.25 ? pick(opts) : null;
           db.order_items.push({
             order_item_id: orderItemId, round_id: roundId, item_id: it.item_id,
-            unit_price_satang: it.price_satang, quantity: randInt(1, 3),
+            unit_price_satang: it.price_satang + (o ? o.price_delta_satang : 0),
+            quantity: randInt(1, 3),
             note: null, status, cancelled_at,
           });
-          const opts = extrasByItem[it.item_id];
-          if (opts && rng() < 0.25) {
-            const o = pick(opts);
+          if (o) {
             optRowId++;
             db.order_item_options.push({
               order_item_option_id: optRowId, order_item_id: orderItemId, option_id: o.option_id,
@@ -225,10 +228,6 @@ function lines() {
   const rounds = new Map(db.order_rounds.map((r) => [r.round_id, r]));
   const items = new Map(db.menu_items.map((m) => [m.item_id, m]));
   const cats = new Map(db.categories.map((c) => [c.category_id, c]));
-  const optTotal = {};
-  for (const o of db.order_item_options) {
-    optTotal[o.order_item_id] = (optTotal[o.order_item_id] || 0) + o.price_delta_satang_snapshot;
-  }
   _lines = db.order_items.map((oi) => {
     const r = rounds.get(oi.round_id);
     const b = bills.get(r.bill_id);
@@ -248,7 +247,7 @@ function lines() {
       unitPrice: oi.unit_price_satang,
       note: oi.note,
       status: oi.status,
-      amount: (oi.unit_price_satang + (optTotal[oi.order_item_id] || 0)) * oi.quantity,
+      amount: oi.unit_price_satang * oi.quantity, // ตรงกับ SQL ใน Salesdb.js
     };
   });
   return _lines;

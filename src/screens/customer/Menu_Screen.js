@@ -73,7 +73,7 @@ export default function MenuScreen({ route, navigation }) {
       
       <View style={styles.leftPanel}>
         <TouchableOpacity style={styles.backButton} onPress={() =>  navigation.navigate('SelectTable')}>
-          <Text style={styles.backButtonText}>← กลับไปหน้าเลือกโต๊ะ</Text>
+          <Text style={styles.backButtonText}> กลับไปหน้าเลือกโต๊ะ</Text>
         </TouchableOpacity>
         <Text style={styles.restaurantName}> ครัว 4 สหาย </Text>
         <Text style={styles.billInfoText}>TBL - {tableId}</Text>
@@ -217,7 +217,7 @@ export default function MenuScreen({ route, navigation }) {
             })
           }
         >
-          <Text style={styles.reviewButtonText}>ตรวจรายการ →</Text>
+          <Text style={styles.reviewButtonText}>ตรวจรายการ </Text>
         </Pressable>
       </View>
 

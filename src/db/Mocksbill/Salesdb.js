@@ -7,25 +7,18 @@
 //
 // รูปแบบฟังก์ชัน/ผลลัพธ์เหมือนกับ src/db/mockDb.js ทุกอย่าง จึงสลับกันได้ที่ import ใน Salesqueries.js
 
-// ชิ้นส่วน SQL ที่ใช้ซ้ำ: รวมราคาตัวเลือกเพิ่มเติมต่อรายการ
-const OPTION_TOTAL_JOIN = `
-  LEFT JOIN (
-    SELECT order_item_id, SUM(price_delta_satang_snapshot) AS option_total
-    FROM order_item_options
-    GROUP BY order_item_id
-  ) opt ON opt.order_item_id = oi.order_item_id
-`;
-const LINE_AMOUNT = `(oi.unit_price_satang + COALESCE(opt.option_total, 0)) * oi.quantity`;
+// ยอดเงินของแต่ละรายการ = oi.unit_price_satang * oi.quantity
+// (unit_price_satang รวมราคาตัวเลือกเพิ่มเติมมาแล้วตั้งแต่ตอนเพิ่มลงตะกร้า จึงไม่ต้องบวก option ซ้ำ)
+// ทุกคำสั่งเขียน SQL เต็ม ๆ ไม่ต่อสตริงใด ๆ เข้าไป — ค่าจากผู้ใช้ (วันที่) ส่งผ่าน ? เท่านั้น
 
 // ---- ยอดขายรวมของวันนั้น (ไม่นับรายการที่ถูกยกเลิก) ----
 export async function getTotalSalesForDate(db, dateStr) {
   const row = await db.getFirstAsync(
     `
-    SELECT COALESCE(SUM(${LINE_AMOUNT}), 0) AS total
+    SELECT COALESCE(SUM(oi.unit_price_satang * oi.quantity), 0) AS total
     FROM order_items oi
     JOIN order_rounds r ON r.round_id = oi.round_id
     JOIN bills b ON b.bill_id = r.bill_id
-    ${OPTION_TOTAL_JOIN}
     WHERE oi.status != 'cancelled'
       AND date(b.opened_at, '+7 hours') = ?
     `,
@@ -65,11 +58,10 @@ export async function getDailySummary(db, dateStr) {
 
       db.getFirstAsync(
         `
-        SELECT COUNT(*) AS cnt, COALESCE(SUM(${LINE_AMOUNT}), 0) AS amt
+        SELECT COUNT(*) AS cnt, COALESCE(SUM(oi.unit_price_satang * oi.quantity), 0) AS amt
         FROM order_items oi
         JOIN order_rounds r ON r.round_id = oi.round_id
         JOIN bills b ON b.bill_id = r.bill_id
-        ${OPTION_TOTAL_JOIN}
         WHERE oi.status = 'cancelled'
           AND date(b.opened_at, '+7 hours') = ?
         `,
@@ -80,11 +72,10 @@ export async function getDailySummary(db, dateStr) {
         `
         SELECT
           CAST(strftime('%H', r.ordered_at, '+7 hours') AS INTEGER) AS hour,
-          SUM(${LINE_AMOUNT}) AS amt
+          SUM(oi.unit_price_satang * oi.quantity) AS amt
         FROM order_items oi
         JOIN order_rounds r ON r.round_id = oi.round_id
         JOIN bills b ON b.bill_id = r.bill_id
-        ${OPTION_TOTAL_JOIN}
         WHERE oi.status != 'cancelled'
           AND date(b.opened_at, '+7 hours') = ?
         GROUP BY hour
@@ -136,13 +127,12 @@ export async function getDailySummary(db, dateStr) {
 export async function getCategoryBreakdown(db, dateStr) {
   const rows = await db.getAllAsync(
     `
-    SELECT c.name AS name, SUM(oi.quantity) AS qty, SUM(${LINE_AMOUNT}) AS amount
+    SELECT c.name AS name, SUM(oi.quantity) AS qty, SUM(oi.unit_price_satang * oi.quantity) AS amount
     FROM order_items oi
     JOIN order_rounds r ON r.round_id = oi.round_id
     JOIN bills b ON b.bill_id = r.bill_id
     JOIN menu_items mi ON mi.item_id = oi.item_id
     JOIN categories c ON c.category_id = mi.category_id
-    ${OPTION_TOTAL_JOIN}
     WHERE oi.status != 'cancelled'
       AND date(b.opened_at, '+7 hours') = ?
     GROUP BY c.category_id
@@ -183,11 +173,10 @@ export async function getBillsForDate(db, dateStr) {
   const rows = await db.getAllAsync(
     `SELECT r.bill_id, r.round_id, r.round_number, r.ordered_at,
             oi.order_item_id, oi.quantity, oi.unit_price_satang, oi.status, oi.note,
-            mi.name, ${LINE_AMOUNT} AS amount
+            mi.name, oi.unit_price_satang * oi.quantity AS amount
        FROM order_rounds r
        JOIN order_items oi ON oi.round_id = r.round_id
        JOIN menu_items mi ON mi.item_id = oi.item_id
-       ${OPTION_TOTAL_JOIN}
       WHERE r.bill_id IN (SELECT bill_id FROM bills WHERE date(opened_at, '+7 hours') = ?)
       ORDER BY r.bill_id, r.round_number, oi.order_item_id`,
     [dateStr]

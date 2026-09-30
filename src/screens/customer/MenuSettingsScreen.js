@@ -4,49 +4,21 @@ import {
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import colors, { withAlpha } from '../customer/style/colors';
+// SQL ทั้งหมดของหน้านี้อยู่ใน db/ (หน้าจอห้ามเขียน SQL เอง)
+import {
+  getCategories,
+  getMenuItemsWithCategory,
+  getSoldTodayByItem,
+  getMenuOptionsByItem,
+  updateMenuItem,
+  setMenuItemAvailability,
+  addMenuOption,
+  addMenuItem,
+} from '../../db/queries_admin/menuSettings';
 
-// ---------------------------------------------------------------------------
-// db functions — รวมไว้ไฟล์เดียวกับหน้าจอ ตรงกับตารางใน db/schema.js
-// (categories, menu_items, menu_options, order_items, order_rounds, bills)
-// ---------------------------------------------------------------------------
+// แปลงหน่วยเงินสำหรับแสดงผล/รับค่าจากช่องกรอก (ไม่ใช่ SQL จึงอยู่ในหน้าจอได้)
 const satangToBaht = (satang) => Math.round(satang / 100);
 const bahtToSatang = (baht) => Math.round(baht * 100);
-const getCategories = (db) =>
-  db.getAllAsync('SELECT category_id AS id, name FROM categories ORDER BY category_id');
-const getMenuItemsWithCategory = (db) =>
-  db.getAllAsync(`SELECT mi.item_id AS id, mi.name, mi.price_satang AS priceSatang,
-    mi.is_available AS isAvailable, mi.category_id AS categoryId, c.name AS categoryName
-    FROM menu_items mi JOIN categories c ON c.category_id = mi.category_id ORDER BY mi.item_id`);
-async function getSoldTodayByItem(db) {
-  const rows = await db.getAllAsync(`SELECT oi.item_id AS itemId, SUM(oi.quantity) AS qty
-    FROM order_items oi JOIN order_rounds r ON r.round_id = oi.round_id
-    JOIN bills b ON b.bill_id = r.bill_id
-    WHERE oi.status != 'cancelled' AND date(b.opened_at) = date('now', 'localtime')
-    GROUP BY oi.item_id`);
-  const map = {};
-  for (const row of rows) map[row.itemId] = row.qty;
-  return map;
-}
-
-const getMenuOptionsByItem = (db, itemId) =>
-  db.getAllAsync(
-    'SELECT option_id AS id, name, price_delta_satang AS priceDeltaSatang FROM menu_options WHERE item_id = ? ORDER BY option_id',
-    [itemId]
-  );
-const updateMenuItem = (db, itemId, { name, priceSatang, categoryId }) =>
-  db.runAsync('UPDATE menu_items SET name = ?, price_satang = ?, category_id = ? WHERE item_id = ?', [
-    name, priceSatang, categoryId, itemId,
-  ]);
-const setMenuItemAvailability = (db, itemId, isAvailable) =>
-  db.runAsync('UPDATE menu_items SET is_available = ? WHERE item_id = ?', [isAvailable ? 1 : 0, itemId]);
-const addMenuOption = async (db, itemId, name, priceDeltaSatang) =>
-  (await db.runAsync('INSERT INTO menu_options (item_id, name, price_delta_satang) VALUES (?, ?, ?)', [
-    itemId, name, priceDeltaSatang,
-  ])).lastInsertRowId;
-const addMenuItem = async (db, { name, categoryId, priceSatang }) =>
-  (await db.runAsync('INSERT INTO menu_items (category_id, name, price_satang) VALUES (?, ?, ?)', [
-    categoryId, name, priceSatang,
-  ])).lastInsertRowId;
 const border = withAlpha(colors.core.darkGreen, 0.12);
 const SIDEBAR_ITEMS = ['เมนูและราคา', 'บิลทั้งร้าน'];
 const SUMMARY_ROUTE = 'Summary'; // ชื่อ route ของ SummaryScreen ใน navigator (แก้ให้ตรงกับที่ลงทะเบียนไว้)
