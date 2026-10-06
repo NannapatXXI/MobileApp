@@ -2,18 +2,13 @@ import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getBillWithRounds } from '../../db/db';
-import { toThaiTime } from '../../utils/bill';
+import { toThaiTime, satangToBaht } from '../../utils/bill';
 import OrderInRound from '../../component/BillOrderStatus';
 
-// ยอดเงินของ 1 รอบ (หน่วยสตางค์)
-// unit_price_satang รวมราคา option มาแล้วตอนเพิ่มลงตะกร้า จึงคูณจำนวนได้เลย
-function roundTotal(round) {
-  let sum = 0;
-  for (const item of round.items) {
-    sum += item.unit_price_satang * item.quantity;
-  }
-  return sum;
-}
+// ยอดเงินทุกตัวในหน้านี้มาจาก SQL (getBillWithRounds):
+//   round.total_satang          = ยอดของแต่ละรอบ
+//   bill.totals.subtotal_satang = ยอดสะสมทั้งบิล
+// ไม่นับรายการที่ถูกยกเลิก
 
 export default function PreSendToKitchen({ route, navigation }) {
   const { billId, tableId } = route.params ?? {};
@@ -41,11 +36,6 @@ export default function PreSendToKitchen({ route, navigation }) {
     ? { ...bill, rounds: rounds.filter((r) => r.round_id === selectedRoundId) }
     : bill;
 
-  // ยอดรวมทุกรอบของบิลนี้
-  let billTotal = 0;
-  for (const round of rounds) {
-    billTotal += roundTotal(round);
-  }
 
   return (
     <View style={styles.content}>
@@ -57,7 +47,7 @@ export default function PreSendToKitchen({ route, navigation }) {
 
           <View style={styles.infoBox}>
             <Text style={styles.HeaderText}>ส่งเข้าครัวแล้ว</Text>
-            <Text style={styles.infoText}>
+            <Text testID="text-send-info" style={styles.infoText}>
               รอบที่ : {selectedRound?.round_number ?? '-'}    ส่ง: {toThaiTime(selectedRound?.ordered_at)}  โต๊ะ: {bill?.table_number ?? '-'}  บิล: {bill?.bill_id ?? '-'}
             </Text>
           </View>
@@ -65,7 +55,7 @@ export default function PreSendToKitchen({ route, navigation }) {
 
         <View style={{ paddingRight: 10, alignItems: 'flex-end' }}>
           <Text style={styles.infoText}>ยอดบิลสะสม</Text>
-          <Text style={styles.HeaderText}>{(billTotal / 100).toFixed(0)} บาท</Text>
+          <Text testID="text-bill-total" style={styles.HeaderText}>{satangToBaht(bill?.totals?.subtotal_satang)} บาท</Text>
         </View>
       </View>
 
@@ -110,7 +100,7 @@ export default function PreSendToKitchen({ route, navigation }) {
                           {round.items.length} รายการ
                         </Text>
                         <Text style={{ fontWeight: 'bold', fontSize: 18, color: textColor }}>
-                          {(roundTotal(round) / 100).toFixed(0)} บาท
+                          {satangToBaht(round.total_satang)} บาท
                         </Text>
                       </Pressable>
                     </View>
@@ -125,6 +115,7 @@ export default function PreSendToKitchen({ route, navigation }) {
       <View style={styles.Bottonlayyer}>
         <View style={{ flex: 1, flexDirection: 'row', gap: 20 }}>
           <Pressable
+            testID="btn-order-more"
             style={{ flex: 4, backgroundColor: '#16281F', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
             onPress={() => navigation.navigate('MenuScreen', { billId, tableId })}
           >
@@ -132,12 +123,14 @@ export default function PreSendToKitchen({ route, navigation }) {
           </Pressable>
           <Pressable
             style={{ flex: 3, backgroundColor: '#FFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E0EDE4' }}
+            testID="btn-home"
             onPress={() => navigation.navigate('SelectTable')}
           >
             <Text style={{ color: '#2F6B4F', fontWeight: 'bold', fontSize: 16 }}>กลับหน้าหลัก</Text>
           </Pressable>
           <Pressable
             style={{ flex: 3, backgroundColor: '#FFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E0EDE4' }}
+            testID="btn-see-summary"
             onPress={() => navigation.navigate('Detail', { billId, tableId })}
           >
             <Text style={{ color: '#2F6B4F', fontWeight: 'bold', fontSize: 16 }}>ดูสรุปบิล</Text>

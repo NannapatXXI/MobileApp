@@ -496,6 +496,7 @@ export default function OrderKitScreen({ navigation }) {
       <TouchableOpacity
         key={filter.key}
         activeOpacity={0.75}
+        testID={'filter-' + filter.key}
         onPress={function () { setActiveFilter(filter.key); }}
         style={chipStyle}
       >
@@ -561,7 +562,7 @@ export default function OrderKitScreen({ navigation }) {
           }}
         >
           <View style={styles.roundCardHeadLeft}>
-            <Text style={styles.tableName}>โต๊ะ {round.table_number}</Text>
+            <Text testID="kitchen-card-table" style={styles.tableName}>โต๊ะ {round.table_number}</Text>
             <Text style={styles.roundMeta}>
               รอบที่ {round.round_number} · บิล #{round.bill_id} · {round.items.length} รายการ
             </Text>
@@ -617,6 +618,7 @@ export default function OrderKitScreen({ navigation }) {
         </ScrollView>
 
         <Pressable
+          testID={'round-action-t' + round.table_number + '-r' + round.round_number}
           disabled={action.disabled || isUpdating}
           onPress={function () { handleRoundAction(round); }}
           style={function (pressState) {
@@ -697,7 +699,11 @@ export default function OrderKitScreen({ navigation }) {
             {(bill.total_satang / 100).toLocaleString()}
           </Text>
         </View>
-        <Pressable style={styles.closeBillButton} onPress={function () { handleCloseBill(bill); }}>
+        <Pressable
+          testID={'close-bill-t' + bill.table_number}
+          style={styles.closeBillButton}
+          onPress={function () { handleCloseBill(bill); }}
+        >
           <Text style={styles.closeBillButtonText}>ปิดบิล</Text>
         </Pressable>
       </View>
@@ -822,7 +828,7 @@ export default function OrderKitScreen({ navigation }) {
         <View style={styles.legendRow}>{LEGEND_ITEMS.map(renderLegendItem)}</View>
 
         <View style={styles.footerButtonsRow}>
-          <TouchableOpacity activeOpacity={0.75} style={styles.footerButtonGhost} onPress={goSelectTable}>
+          <TouchableOpacity testID="btn-kitchen-home" activeOpacity={0.75} style={styles.footerButtonGhost} onPress={goSelectTable}>
             <Text style={styles.footerButtonText}>ไปหน้าเลือกโต๊ะ</Text>
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.75} style={styles.footerButton} onPress={openHistoryModal}>
@@ -831,7 +837,7 @@ export default function OrderKitScreen({ navigation }) {
           <TouchableOpacity activeOpacity={0.75} style={styles.footerButton} onPress={openCancelledModal}>
             <Text style={styles.footerButtonText}>รายการที่ถูกยกเลิก</Text>
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.75} style={styles.footerButtonPrimary} onPress={openBillsModal}>
+          <TouchableOpacity testID="btn-open-close-bill" activeOpacity={0.75} style={styles.footerButtonPrimary} onPress={openBillsModal}>
             <Text style={styles.footerButtonPrimaryText}>ปิดบิล</Text>
           </TouchableOpacity>
         </View>
@@ -843,7 +849,7 @@ export default function OrderKitScreen({ navigation }) {
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>{modalTitle}</Text>
-              <Pressable onPress={closeModal} style={styles.modalCloseButton}>
+              <Pressable testID="btn-modal-close" onPress={closeModal} style={styles.modalCloseButton}>
                 <Text style={styles.modalCloseButtonText}>×</Text>
               </Pressable>
             </View>

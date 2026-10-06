@@ -7,7 +7,7 @@ import * as MailComposer from 'expo-mail-composer';
 import { captureRef } from 'react-native-view-shot';
 import { File, Paths } from 'expo-file-system';
 import { getBillWithRounds } from '../../db/db';
-import { billToOrders, calcBillTotals, toThaiTime } from '../../utils/bill';
+import { billToOrders, satangToBaht, toThaiTime } from '../../utils/bill';
 
 const FORMAT_OPTIONS = [
   { id: 'pdf_a5', label: 'PDF A5 (ใบเสร็จเต็ม)', size: '~120 KB' },
@@ -32,7 +32,7 @@ function buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax
   for (const round of orders) {
     rows += `<tr><td colspan="2" class="round">ROUND ${round.round} · ${round.sentTime}</td></tr>`;
     for (const item of round.items) {
-      rows += `<tr><td>${item.name} ×${item.qty}</td><td class="right">${item.price * item.qty}</td></tr>`;
+      rows += `<tr><td>${item.name} ×${item.qty}</td><td class="right">${item.lineTotal}</td></tr>`;
     }
   }
 
@@ -64,10 +64,10 @@ function buildReceiptHtml({ bill, orders, subtotal, service, vat, total, fullTax
         <table>${rows}</table>
         <hr/>
         <table>
-          <tr><td>SUBTOTAL</td><td class="right">${subtotal.toLocaleString()}</td></tr>
-          <tr><td>SERVICE 10%</td><td class="right">${service.toLocaleString()}</td></tr>
-          <tr><td>VAT 7%</td><td class="right">${vat.toLocaleString()}</td></tr>
-          <tr class="total"><td>TOTAL</td><td class="right">฿${total.toLocaleString()}</td></tr>
+          <tr><td>SUBTOTAL</td><td class="right">${subtotal}</td></tr>
+          <tr><td>SERVICE 10%</td><td class="right">${service}</td></tr>
+          <tr><td>VAT 7%</td><td class="right">${vat}</td></tr>
+          <tr class="total"><td>TOTAL</td><td class="right">฿${total}</td></tr>
         </table>
         <p class="center">ขอบคุณที่มาทานครับสุดหล่อ</p>
       </body>
@@ -90,7 +90,11 @@ export default function ExportBillScreen({ route, navigation }) {
   }, [db, billId]);
 
   const orders = billToOrders(bill);
-  const { subtotal, service, vat, total } = calcBillTotals(orders);
+  // ยอดเงินทั้งหมดคำนวณใน SQL (getBillTotals) — ตรงนี้แค่แปลงสตางค์เป็นข้อความบาท
+  const subtotal = satangToBaht(bill?.totals?.subtotal_satang);
+  const service = satangToBaht(bill?.totals?.service_satang);
+  const vat = satangToBaht(bill?.totals?.vat_satang);
+  const total = satangToBaht(bill?.totals?.total_satang);
   const billDate = bill?.opened_at?.slice(0, 10) ?? '-';
 
   // 1) สร้างไฟล์ PDF -> คืนค่า uri ของไฟล์ชั่วคราว
@@ -181,7 +185,7 @@ export default function ExportBillScreen({ route, navigation }) {
                 <Row
                   key={item.id}
                   label={`${item.name}  ×${item.qty}`}
-                  value={(item.price * item.qty).toString()}
+                  value={item.lineTotal}
                 />
               ))}
               <View style={{ height: 8 }} />
@@ -190,13 +194,13 @@ export default function ExportBillScreen({ route, navigation }) {
 
           <View style={styles.dividerDash} />
 
-          <Row label="SUBTOTAL" value={subtotal.toLocaleString()} />
-          <Row label="SERVICE 10%" value={service.toString()} />
-          <Row label="VAT 7%" value={vat.toString()} />
+          <Row label="SUBTOTAL" value={subtotal} />
+          <Row label="SERVICE 10%" value={service} />
+          <Row label="VAT 7%" value={vat} />
 
           <View style={styles.dividerSolid} />
 
-          <Row label="TOTAL" value={`฿${total.toLocaleString()}`} bold />
+          <Row label="TOTAL" value={`฿${total}`} bold />
 
           <View style={{ height: 32 }} />
           <Text style={styles.footer}>ขอบคุณที่มาทานค่ะ</Text>

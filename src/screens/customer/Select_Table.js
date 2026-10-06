@@ -167,10 +167,10 @@ export default function SelectTable({ navigation }) {
         <View style={styles.leftBottomRow}>
          
 
-          <Pressable style={styles.resetButton} onPress={handleResetData}>
+          <Pressable testID="btn-reset" style={styles.resetButton} onPress={handleResetData}>
             <Text style={styles.resetButtonText}>ล้างข้อมูลการขาย</Text>
           </Pressable>
-          <Pressable style={styles.kitchenButton} onPress={() => navigation.navigate('StaffScreen')}>
+          <Pressable testID="btn-staff" style={styles.kitchenButton} onPress={() => navigation.navigate('StaffScreen')}>
             <Text style={styles.kitchenButtonText}>staff</Text>
           </Pressable>
         </View>
@@ -204,6 +204,7 @@ export default function SelectTable({ navigation }) {
               return (
                 <Pressable
                   key={t.table_id}
+                  testID={`table-${t.table_number}`}
                   onPress={() => setSelectedTableId(t.table_id)}
                   style={[
                     styles.tableCard,
@@ -236,6 +237,7 @@ export default function SelectTable({ navigation }) {
 
         <View style={styles.actionRow}>
           <Pressable
+            testID="btn-open-bill"
             onPress={handleOpenNewBill}
             disabled={!canOpenNewBill}
             style={[styles.primaryButton, !canOpenNewBill && styles.primaryButtonDisabled]}
@@ -246,6 +248,7 @@ export default function SelectTable({ navigation }) {
           </Pressable>
 
           <Pressable
+            testID="btn-enter-bill"
             onPress={handleEnterExistingBill}
             disabled={!canEnterExistingBill}
             style={[styles.secondaryButton, !canEnterExistingBill && styles.secondaryButtonDisabled]}
@@ -260,6 +263,7 @@ export default function SelectTable({ navigation }) {
             </Text>
           </Pressable>
           <Pressable
+            testID="btn-see-bill"
             onPress={handleEnterToSeeBill}
             disabled={!canEnterExistingBill}
             style={[styles.secondaryButton, !canEnterExistingBill && styles.secondaryButtonDisabled]}

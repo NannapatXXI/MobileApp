@@ -36,7 +36,7 @@ const BillOrder =({orders})=>{
                         
                             <Text style={{ flex: 2,paddingTop:18 ,paddingLeft:12}}>฿{item.price}</Text>
                             <Text style={{ flex: 1 ,paddingTop:18,textAlign: 'center' }}>{item.qty}</Text>
-                            <Text style={{ flex: 2,fontSize:18,fontWeight:'bold',paddingTop:14 ,textAlign: 'right',paddingRight:12}}>฿{item.price * item.qty}</Text>
+                            <Text style={{ flex: 2,fontSize:18,fontWeight:'bold',paddingTop:14 ,textAlign: 'right',paddingRight:12}}>฿{item.lineTotal}</Text>
                         </View>
                         )}
                         scrollEnabled={false}

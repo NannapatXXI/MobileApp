@@ -154,6 +154,7 @@ export default function ItemDetailScreen({ route, navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>หมายเหตุถึงครัว</Text>
             <TextInput
+              testID="input-note"
               style={styles.noteInput}
               value={note}
               onChangeText={setNote}
@@ -180,12 +181,12 @@ export default function ItemDetailScreen({ route, navigation }) {
               <Text style={styles.stepperButtonText}>−</Text>
             </Pressable>
             <Text style={styles.stepperValue}>{quantity}</Text>
-            <Pressable style={styles.stepperButton} onPress={() => setQuantity((q) => q + 1)}>
+            <Pressable testID="btn-qty-plus" style={styles.stepperButton} onPress={() => setQuantity((q) => q + 1)}>
               <Text style={styles.stepperButtonText}>+</Text>
             </Pressable>
           </View>
 
-          <Pressable style={styles.addToCartButton} onPress={handleAddToCart}>
+          <Pressable testID="btn-add-to-cart" style={styles.addToCartButton} onPress={handleAddToCart}>
             <Text style={styles.addToCartButtonText}>
               เพิ่มลงตะกร้า · ฿{(grandTotal / 100).toLocaleString()}
             </Text>

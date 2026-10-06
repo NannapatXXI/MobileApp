@@ -43,6 +43,7 @@ export default function StaffScreen({ navigation }) {
           {STAFF_MODES.map((mode, index) => (
             <Pressable
               key={mode.key}
+              testID={`staff-mode-${mode.key}`}
               style={[styles.optionCard, index === 0 && styles.optionCardSelected]}
               onPress={() => handlePressMode(mode)}
             >

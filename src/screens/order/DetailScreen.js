@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import BillOrder from '../../component/BillOrder';
 import { getBillWithRounds } from '../../db/db';
-import { billToOrders, calcBillTotals, toThaiTime } from '../../utils/bill';
+import { billToOrders, satangToBaht, toThaiTime } from '../../utils/bill';
 
 
 export default function DetailScreen({ route, navigation }) {
@@ -17,8 +17,9 @@ export default function DetailScreen({ route, navigation }) {
   }, [db, billId]);
 
   const orders = billToOrders(bill);
-  const { subtotal, service, vat, total } = calcBillTotals(orders);
-  const itemCount = orders.reduce((sum, r) => sum + r.items.length, 0);
+  // ยอดเงินทั้งหมดคำนวณใน SQL (getBillTotals) หน้าจอแค่แปลงสตางค์เป็นบาทตอนแสดง
+  const totals = bill?.totals;
+  const itemCount = orders.reduce((sum, r) => sum + r.items.length, 0); // นับจำนวนรายการ ไม่ใช่ยอดเงิน
 
     return (
       <View style={styles.content}>
@@ -38,27 +39,27 @@ export default function DetailScreen({ route, navigation }) {
                 <Text style={{fontSize:24,paddingBottom:12, paddingTop:20,fontWeight:'bold'}} >ยอดที่ต้องชำระ</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom:10}}>
                   <Text  style={{fontSize:18,color: '#42544A'}}>รวมค่าอาหาร</Text>
-                  <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{subtotal.toLocaleString()}</Text>
+                  <Text testID="text-subtotal" style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{satangToBaht(totals?.subtotal_satang)}</Text>
                 </View>
                
                 <View style={{flexDirection:'row', justifyContent: 'space-between', paddingBottom:10 }}>
                 
                         <Text style={{fontSize:18,color: '#42544A'}}>ค่าบริการ 10%</Text>
-                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{service.toLocaleString()}</Text>
+                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}}>฿{satangToBaht(totals?.service_satang)}</Text>
                   
                  
                    
                 </View>
                 <View style={{flexDirection:'row', justifyContent: 'space-between' , paddingBottom:10}}>
                        <Text  style={{fontSize:18,color: '#42544A'}}>ภาษีมูลค่าเพิ่ม 7% </Text>
-                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}} >฿{vat.toLocaleString()}</Text>
+                       <Text  style={{fontSize:18,color: '#42544A',fontWeight:'bold'}} >฿{satangToBaht(totals?.vat_satang)}</Text>
                   
                 </View>
                 <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0EDE4', paddingTop:20 }}/>
 
                 <View style={{flexDirection:'row', justifyContent: 'space-between', paddingTop:20 }}>
                   <Text style={{fontSize:24,fontWeight:'bold'}}>ยอดรวมทั้งบิล</Text>
-                  <Text style={{fontSize:30,fontWeight:'bold'}} >฿{total.toLocaleString()}</Text>
+                  <Text testID="text-grand-total" style={{fontSize:30,fontWeight:'bold'}} >฿{satangToBaht(totals?.total_satang)}</Text>
                 </View>
 
 

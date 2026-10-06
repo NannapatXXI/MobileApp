@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import colors, { alpha } from './style/colors';
 import { useCart } from '../../context/CartContext';
 import { getPreviousRoundsSummary, submitOrderRound } from '../../db/queries_customer/orders';
+import { getBillTotals } from '../../db/db';
 import { MENU_IMAGES } from './menuImages';
 
 export default function ReviewScreen({ route, navigation }) {
@@ -12,15 +13,17 @@ export default function ReviewScreen({ route, navigation }) {
   const db = useSQLiteContext();
 
   const [previousRounds, setPreviousRounds] = useState([])
+  const [previousTotal, setPreviousTotal] = useState(0) // ยอดรอบที่ส่งไปแล้ว — รวมด้วย SQL
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     getPreviousRoundsSummary(db, billId).then(setPreviousRounds);
+    getBillTotals(db, billId).then((t) => setPreviousTotal(t?.subtotal_satang ?? 0));
   }, [db, billId]);
 
+  // ตะกร้ารอบนี้ยังไม่ได้ลง DB จึงรวมใน JS ได้ (ไม่ใช่ "ยอดรวมทั้งบิล" ที่อยู่ใน DB)
   const roundTotal = cart.reduce((sum, c) => sum + c.unit_price_satang * c.quantity, 0);
   const totalPieces = cart.reduce((sum, c) => sum + c.quantity, 0);
-  const previousTotal = previousRounds.reduce((sum, r) => sum + r.total_satang, 0);
   const grandTotal = previousTotal + roundTotal;
 
   async function handleSubmit() {
@@ -131,7 +134,7 @@ export default function ReviewScreen({ route, navigation }) {
           </Text>
         </View>
 
-        <Pressable style={styles.submitButton} disabled={submitting} onPress={handleSubmit}>
+        <Pressable testID="btn-submit-kitchen" style={styles.submitButton} disabled={submitting} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>ส่งเข้าครัว · รอบที่ {roundNumber}</Text>
         </Pressable>
 

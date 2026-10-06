@@ -316,86 +316,7 @@ export async function logAllData(db) {
 }
 
 
-// mock data รอของภูริ data นัี้เกี่ยวกับข้อมูลพวกบิลที่เปิดกับโต้ะ
-export async function seedMockBill(db) {
-  const existing = await db.getFirstAsync('SELECT COUNT(*) AS count FROM bills');
-  if (existing?.count > 0) return;
-
-  // unit_price คือราคาต่อจานที่ "รวม option แล้ว" (เหมือนตอนลูกค้ากดเพิ่มลงตะกร้าจริง)
-  // option = ตัวเลือกที่แนบไปกับจานนั้น (ถ้ามี)
-  // orderedMinsAgo = สั่งมาเมื่อกี่นาทีแล้ว / statusMinsAgo = เปลี่ยนเป็นสถานะนี้เมื่อกี่นาทีแล้ว
-  // (ใช้แค่ตอนทดสอบจอครัว — ของจริงเวลามาจาก datetime('now') ตอนกดปุ่มใน queries_kitchen/queue.js)
-  const MOCK_ROUNDS = [
-    { // รอบที่ 1
-      orderedMinsAgo: 42,
-      items: [
-        { itemId: 1, unitPrice: 7000, qty: 2, note: 'ธรรมดา', status: 'served', statusMinsAgo: 28,
-          option: { optionId: 3, name: 'ไข่ดาว', price: 1000 } }, // กะเพราหมูสับ 60 + ไข่ดาว 10
-        { itemId: 3, unitPrice: 6500, qty: 1, note: '', status: 'served', statusMinsAgo: 30 },
-        { itemId: 4, unitPrice: 8000, qty: 1, note: '', status: 'served', statusMinsAgo: 30 },
-        { itemId: 7, unitPrice: 5500, qty: 2, note: '', status: 'served', statusMinsAgo: 32 },
-        { itemId: 17, unitPrice: 3500, qty: 2, note: '', status: 'served', statusMinsAgo: 33 },
-      ],
-    },
-    { // รอบที่ 2
-      orderedMinsAgo: 9,
-      items: [
-        { itemId: 10, unitPrice: 5500, qty: 3, note: 'หวานน้อย', status: 'cooking', statusMinsAgo: 4 },
-        { itemId: 23, unitPrice: 3000, qty: 2, note: '', status: 'pending' },
-        { itemId: 6, unitPrice: 9000, qty: 1, note: 'เผ็ดน้อย', status: 'cooking', statusMinsAgo: 2 },
-        { itemId: 11, unitPrice: 5500, qty: 2, note: '', status: 'pending' },
-        { itemId: 25, unitPrice: 2000, qty: 4, note: '', status: 'pending' },
-      ],
-    },
-  ];
-
-  await db.withTransactionAsync(async () => {
-    const bill = await db.runAsync(
-      `INSERT INTO bills (table_id, opened_at, status) VALUES (?, datetime('now'), 'open')`,
-      [1]
-    );
-    const billId = bill.lastInsertRowId;
-
-    for (let i = 0; i < MOCK_ROUNDS.length; i++) {
-      const round = MOCK_ROUNDS[i];
-      const roundRow = await db.runAsync(
-        `INSERT INTO order_rounds (bill_id, round_number, ordered_at) VALUES (?, ?, datetime('now', ?))`,
-        [billId, i + 1, `-${round.orderedMinsAgo} minutes`]
-      );
-      const roundId = roundRow.lastInsertRowId;
-
-      for (const item of round.items) {
-        // pending ยังไม่เคยเริ่มทำ/เสิร์ฟ -> ทิ้งเวลาไว้ NULL
-        const startedOffset =
-          item.status === 'pending' ? null : `-${item.statusMinsAgo} minutes`;
-        const servedOffset = item.status === 'served' ? `-${item.statusMinsAgo} minutes` : null;
-
-        const orderItem = await db.runAsync(
-          `INSERT INTO order_items
-             (round_id, item_id, unit_price_satang, quantity, note, status, started_at, served_at)
-           VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?), datetime('now', ?))`,
-          [
-            roundId,
-            item.itemId,
-            item.unitPrice,
-            item.qty,
-            item.note,
-            item.status,
-            startedOffset,
-            servedOffset,
-          ]
-        );
-
-        if (item.option) {
-          await db.runAsync(
-            `INSERT INTO order_item_options (order_item_id, option_id, option_name_snapshot, price_delta_satang_snapshot) VALUES (?, ?, ?, ?)`,
-            [orderItem.lastInsertRowId, item.option.optionId, item.option.name, item.option.price]
-          );
-        }
-      }
-    }
-  });
-}
+// บิลพร้อมทุกรอบ ทุกรายการ ตัวเลือกที่สั่ง และยอดเงินที่ SQL คำนวณให้ (totals)
 export async function getBillWithRounds(db, billId) {
   const bill = await db.getFirstAsync(`
     SELECT b.*, t.table_number
@@ -406,19 +327,25 @@ export async function getBillWithRounds(db, billId) {
 
   if (!bill) return null;
 
+  // total_satang = ยอดของรอบนั้น รวมด้วย SQL (ไม่นับรายการที่ยกเลิก)
   const rounds = await db.getAllAsync(`
-    SELECT round_id, round_number, ordered_at
-    FROM order_rounds
-    WHERE bill_id = ?
-    ORDER BY round_number
+    SELECT r.round_id, r.round_number, r.ordered_at,
+           (SELECT COALESCE(SUM(oi.unit_price_satang * oi.quantity), 0)
+              FROM order_items oi
+             WHERE oi.round_id = r.round_id AND oi.status != 'cancelled') AS total_satang
+    FROM order_rounds r
+    WHERE r.bill_id = ?
+    ORDER BY r.round_number
   `, [billId]);
 
   for (const round of rounds) {
+    // line_total_satang = ราคารวมของรายการนั้น (ราคาต่อหน่วย × จำนวน) คิดใน SQL
     round.items = await db.getAllAsync(`
-      SELECT 
+      SELECT
         i.order_item_id,
         i.unit_price_satang,
         i.quantity,
+        i.unit_price_satang * i.quantity AS line_total_satang,
         i.note,
         i.status,
         m.name
@@ -437,5 +364,31 @@ export async function getBillWithRounds(db, billId) {
     }
   }
 
-  return { ...bill, rounds };
+  const totals = await getBillTotals(db, billId);
+  return { ...bill, rounds, totals };
+}
+
+// ยอดเงินทั้งบิล — คำนวณด้วย SQL ทั้งหมดตามข้อกำหนด 3.2 ข้อ 5
+// (ห้ามวนลูปบวกใน JavaScript) ทุกค่าเป็นสตางค์ หารด้วย 100 ตอนแสดงผล
+//   subtotal_satang = SUM(ราคาต่อหน่วย × จำนวน) ของทุกรอบในบิล ไม่นับรายการที่ยกเลิก
+//   service_satang  = ค่าบริการ 10% (ปัดเป็นสตางค์)
+//   vat_satang      = ภาษีมูลค่าเพิ่ม 7% (ปัดเป็นสตางค์)
+//   total_satang    = ยอดรวมทั้งบิล
+// ราคาต่อหน่วยใช้ unit_price_satang ที่บันทึกไว้ตอนสั่ง (snapshot) ไม่ได้อ่านจากตารางเมนู
+// แก้ราคาเมนูทีหลัง บิลเก่าจึงไม่เปลี่ยน
+export async function getBillTotals(db, billId) {
+  return db.getFirstAsync(`
+    SELECT subtotal_satang,
+           CAST(ROUND(subtotal_satang * 0.10) AS INTEGER) AS service_satang,
+           CAST(ROUND(subtotal_satang * 0.07) AS INTEGER) AS vat_satang,
+           subtotal_satang
+             + CAST(ROUND(subtotal_satang * 0.10) AS INTEGER)
+             + CAST(ROUND(subtotal_satang * 0.07) AS INTEGER) AS total_satang
+    FROM (
+      SELECT COALESCE(SUM(oi.unit_price_satang * oi.quantity), 0) AS subtotal_satang
+      FROM order_rounds r
+      JOIN order_items oi ON oi.round_id = r.round_id
+      WHERE r.bill_id = ? AND oi.status != 'cancelled'
+    )
+  `, [billId]);
 }

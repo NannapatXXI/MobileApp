@@ -4,7 +4,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import PreSendToKitchen from './src/screens/order/PreSendToKitchen';
 import DetailScreen from './src/screens/order/DetailScreen';
 import ExportBillScreen from './src/screens/order/ExportBillScreen';
-import { DATABASE_NAME, initDb, seedDb, seedMockBill } from './src/db/db';
+import { DATABASE_NAME, initDb, seedDb } from './src/db/db';
 import { CartProvider } from './src/context/CartContext';
 import SelectTable from './src/screens/customer/Select_Table';
 import MenuScreen from './src/screens/customer/Menu_Screen';
@@ -25,7 +25,6 @@ const Stack = createNativeStackNavigator();
 async function initDatabase(db) {
   await initDb(db);
   await seedDb(db);
-  await seedMockBill(db);
 }
 
 export default function App() {

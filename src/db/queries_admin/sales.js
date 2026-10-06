@@ -1,14 +1,13 @@
-// src/db/salesDb.js
-// คิวรีสรุปยอดขายจาก SQLite จริง ตาม schema ใน db/schema.js
+// src/db/queries_admin/sales.js
+// query สรุปยอดขายสำหรับหน้าสรุปยอดขายรายวัน (Summaryscreen) — ฝั่งผู้จัดการ
 // ทุกฟังก์ชันรับ (db, ...) โดย db ได้จาก useSQLiteContext()
 //
 // ทุกยอดเงินคืนเป็น "สตางค์" (INTEGER) — แปลงเป็นบาทตอนแสดงผลในหน้าจอเท่านั้น
 // วันที่รับเป็น 'YYYY-MM-DD' เวลาไทย (UTC+7) — แปลง opened_at (UTC) ด้วย date(opened_at, '+7 hours')
 //
-// รูปแบบฟังก์ชัน/ผลลัพธ์เหมือนกับ src/db/mockDb.js ทุกอย่าง จึงสลับกันได้ที่ import ใน Salesqueries.js
-
 // ยอดเงินของแต่ละรายการ = oi.unit_price_satang * oi.quantity
 // (unit_price_satang รวมราคาตัวเลือกเพิ่มเติมมาแล้วตั้งแต่ตอนเพิ่มลงตะกร้า จึงไม่ต้องบวก option ซ้ำ)
+// การรวมยอดทุกจุดทำใน SQL (SUM) ตามข้อกำหนด 3.2 ข้อ 5
 // ทุกคำสั่งเขียน SQL เต็ม ๆ ไม่ต่อสตริงใด ๆ เข้าไป — ค่าจากผู้ใช้ (วันที่) ส่งผ่าน ? เท่านั้น
 
 // ---- ยอดขายรวมของวันนั้น (ไม่นับรายการที่ถูกยกเลิก) ----
@@ -190,6 +189,7 @@ export async function getBillsForDate(db, dateStr) {
     [dateStr]
   );
 
+  // จัดกลุ่มแถวเป็น บิล → รอบ → รายการ เพื่อแสดงผล (ไม่ได้รวมยอดเงิน ยอดมาจาก SQL ด้านบน)
   const byBill = new Map(
     bills.map((b) => [
       b.bill_id,

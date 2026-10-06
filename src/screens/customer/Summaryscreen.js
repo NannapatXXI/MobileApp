@@ -4,12 +4,11 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import colors, { withAlpha } from './style/colors';
 
-// แหล่งข้อมูล — ดึงยอดขายจาก SQLite จริง (Salesdb.js)
+// แหล่งข้อมูล — ดึงยอดขายจาก SQLite (src/db/queries_admin/sales.js)
 // ฟังก์ชันที่ใช้ (รับ db ตัวแรก คืน Promise):
 // getDailySummary · getCategoryBreakdown · getBillsForDate (รับ db, date) ·
 // getLatestBillDate(db) · getBillCountsByDate(db) → { 'YYYY-MM-DD': จำนวนบิล}  (เงินเป็นสตางค์ วันที่เวลาไทย)
-// ถ้าอยากดูหน้าจอกับข้อมูลจำลองย้อนหลัง 12 เดือน เปลี่ยนเป็น '../../db/Mocksbill/Mockdb' ชั่วคราวได้
-import * as source from '../../db/Mocksbill/Salesdb';
+import * as source from '../../db/queries_admin/sales';
 
 // จัดกลุ่มวันที่ที่มีบิลตามเดือน → [{ month, days, bills, dates }] เดือนใหม่→เก่า วันใหม่→เก่า
 async function getMonthList(db) {
@@ -82,7 +81,7 @@ function Sidebar({ onBack }) {
       <View style={styles.sidebarHeader}>
         <View>
           <Text style={styles.sidebarTitle}>ตั้งค่าร้าน</Text>
-          <Text style={styles.sidebarSubtitle}>ผู้จัดการ · ป้าน้อย</Text>
+          <Text style={styles.sidebarSubtitle}>ผู้จัดการ · สี่สหาย</Text>
         </View>
         <Pressable style={styles.closeButton} onPress={onBack} hitSlop={12}>
           <Text style={styles.closeButtonText}>×</Text>

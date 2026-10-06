@@ -56,7 +56,6 @@ src/db/
 | `ensureColumns(db, table, columns)` | เช็ค `PRAGMA table_info` แล้ว `ALTER TABLE ... ADD COLUMN` เฉพาะคอลัมน์ที่ยังไม่มี — กันเคสไฟล์ DB จากบิลด์เก่าที่ยังไม่มีคอลัมน์ใหม่ (`CREATE TABLE IF NOT EXISTS` ไม่เติมคอลัมน์ให้ไฟล์เดิม) ชื่อตาราง/คอลัมน์มาจากค่าคงที่ในโค้ด ไม่ใช่จากผู้ใช้ |
 | `seedDb(db)` | ใส่หมวดหมู่/เมนู/ตัวเลือก/โต๊ะตั้งต้น เช็คก่อนว่ามีข้อมูลแล้วหรือยังกันใส่ซ้ำ — มี guard ถ้าสะกด `category`/`itemName` ผิดจะ throw error บอกชัดเจน |
 | `resetSalesData(db)` | ลบ `bills` ทั้งหมด (ตารางลูกอย่าง `order_rounds`/`order_items` หายตามเพราะ `ON DELETE CASCADE`) — ผูกกับปุ่ม "ล้างข้อมูลการขาย" ใน `Select_Table.js` แล้ว |
-| `seedMockBill(db)` | บิลตัวอย่าง 1 บิล (โต๊ะ 1, 2 รอบ) ใช้ตอนทดสอบจอครัว — รันครั้งเดียวต่อฐานข้อมูล และยังไม่ถูกยกเลิก ถ้าอยากได้แค่ของจริงให้เอาออกจาก `onInit` ใน `App.js` |
 | `getBillWithRounds(db, billId)` | บิล 1 ใบ + รอบทั้งหมด + รายการ/ตัวเลือกของแต่ละรอบ (ใช้ฝั่งออเดอร์: `PreSendToKitchen` / `DetailScreen` / `ExportBillScreen`) |
 
 ตัวแปร seed ข้างในไฟล์ (แก้ตรงนี้ถ้าจะเปลี่ยนเมนู/ราคา/โต๊ะ): `CATEGORY_SEED`, `MENU_ITEM_SEED`, `MENU_OPTION_SEED`, `TABLE_SEED`

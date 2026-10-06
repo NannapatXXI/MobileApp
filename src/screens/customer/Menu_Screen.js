@@ -83,6 +83,7 @@ export default function MenuScreen({ route, navigation }) {
             return (
               <TouchableOpacity
                 key={c.category_id}
+                testID={`category-${c.category_id}`}
                 onPress={() => setSelectedCategoryId(c.category_id)}
                 style={[styles.categoryItem, isActive && styles.categoryItemActive]}
               >
@@ -105,6 +106,7 @@ export default function MenuScreen({ route, navigation }) {
       <View style={styles.middlePanel}>
         <View style={styles.topRow}>
           <TextInput
+            testID="input-search"
             style={styles.searchInput}
             placeholder='ค้นหาชื่อเมนู เช่น กะเพรา'
             placeholderTextColor={colors.text.placeholder}
@@ -115,6 +117,7 @@ export default function MenuScreen({ route, navigation }) {
           <View style={styles.filterToggleRow}>
             <Text style={styles.filterToggleText}>เฉพาะที่มีของ</Text>
             <Switch
+              testID="switch-available"
               value={onlyAvailable}
               onValueChange={setOnlyAvailable}
               trackColor={{ false: colors.surface.switchOff, true: colors.core.brandGreen }}
@@ -127,7 +130,7 @@ export default function MenuScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>
             {categories.find((c) => c.category_id === selectedCategoryId)?.name ?? ''}
           </Text>
-          <Text style={styles.sectionMeta}>{menuItems.length} รายการ</Text>
+          <Text testID="text-menu-count" style={styles.sectionMeta}>{menuItems.length} รายการ</Text>
         </View>
 
         <ScrollView>
@@ -146,11 +149,12 @@ export default function MenuScreen({ route, navigation }) {
                 <View style={styles.menuCardBody}>
                   <Text style={styles.menuCardName}>{item.name}</Text>
                   <View style={styles.menuCardFooterRow}>
-                    <Text style={styles.menuCardPrice}>
+                    <Text testID={`menu-price-${item.item_id}`} style={styles.menuCardPrice}>
                       ฿{(item.price_satang / 100).toLocaleString()}
                     </Text>
 
                     <Pressable
+                      testID={`add-item-${item.item_id}`}
                       style={styles.addButton}
                       onPress={() =>
                         navigation.navigate('ItemDetailScreen', { itemId: item.item_id })
@@ -172,7 +176,7 @@ export default function MenuScreen({ route, navigation }) {
       
       <View style={styles.rightPanel}>
         <ScrollView style={styles.cartScroll}>
-          <Text style={styles.cartHeaderTitle}>ตะกร้ารอบที่ {roundCount + 1}</Text>
+          <Text testID="text-cart-title" style={styles.cartHeaderTitle}>ตะกร้ารอบที่ {roundCount + 1}</Text>
           <Text style={styles.cartHeaderSubtitle}>ยังไม่ส่งครัว · แก้ไขได้</Text>
 
           <View style={styles.cartList}>
@@ -203,10 +207,11 @@ export default function MenuScreen({ route, navigation }) {
 
         <View style={styles.cartTotalRow}>
           <Text style={styles.cartTotalLabel}>รวมรอบนี้</Text>
-          <Text style={styles.cartTotalValue}>฿{(roundTotal / 100).toLocaleString()}</Text>
+          <Text testID="text-round-total" style={styles.cartTotalValue}>฿{(roundTotal / 100).toLocaleString()}</Text>
         </View>
 
         <Pressable
+          testID="btn-review"
           style={styles.reviewButton}
           disabled={cart.length === 0}
           onPress={() =>
